@@ -1180,292 +1180,327 @@ body{background:var(--white);color:var(--black);font-family:var(--sans);font-wei
 
 <script>
 // ══════════════════════════════════════════════════════════
-//  PURE JS BARCODE SCANNER — EAN-13 / EAN-8 / Code128
-//  No dependencies — works on Safari iOS 14+
-//  Uses canvas frame capture + bar pattern analysis
+//  BARCODE SCANNER ENGINE v2
+//  Stratégie : ZXing CDN (robuste) + fallback pur JS amélioré
+//  Compatible Safari iOS 14+, Chrome Android
 // ══════════════════════════════════════════════════════════
 
 const BarcodeScanner = (function() {
 
-  // ── EAN-13 encoding tables ──
-  const EAN13_L = [
-    [3,2,1,1],[2,2,2,1],[2,1,2,2],[1,4,1,1],[1,1,3,2],
-    [1,2,3,1],[1,1,1,4],[1,3,1,2],[1,2,1,3],[3,1,1,2]
-  ];
-  const EAN13_G = [
-    [1,1,2,3],[1,2,2,2],[2,2,1,2],[1,1,4,1],[2,3,1,1],
-    [1,3,2,1],[4,1,1,1],[2,1,3,1],[3,1,2,1],[2,1,1,3]
-  ];
-  const EAN13_R = [
-    [3,2,1,1],[2,2,2,1],[2,1,2,2],[1,4,1,1],[1,1,3,2],
-    [1,2,3,1],[1,1,1,4],[1,3,1,2],[1,2,1,3],[3,1,1,2]
-  ].map(p=>[p[0],p[1],p[2],p[3]].reverse()); // R = L mirrored
+  let video = null;
+  let canvas = null;
+  let ctx = null;
+  let timer = null;
+  let callback = null;
+  let lastCode = null;
+  let lastTime = 0;
+  let zxingReader = null;
+  let useZXing = false;
+  const DEBOUNCE = 1200;
 
-  const EAN13_FIRST = [
+  // ── Tentative de chargement ZXing depuis CDN ──
+  async function tryLoadZXing() {
+    return new Promise(resolve => {
+      if (typeof ZXing !== 'undefined') { resolve(true); return; }
+      const urls = [
+        'https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js',
+        'https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js',
+      ];
+      let tried = 0;
+      function tryNext() {
+        if (tried >= urls.length) { resolve(false); return; }
+        const s = document.createElement('script');
+        s.src = urls[tried++];
+        s.onload = () => resolve(true);
+        s.onerror = tryNext;
+        s.timeout = 3000;
+        document.head.appendChild(s);
+        setTimeout(() => { if (typeof ZXing === 'undefined') tryNext(); }, 3500);
+      }
+      tryNext();
+    });
+  }
+
+  // ── Init ──
+  async function init(videoEl, cb) {
+    video = videoEl;
+    callback = cb;
+    canvas = document.createElement('canvas');
+    canvas.style.display = 'none';
+    document.body.appendChild(canvas);
+    ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    // Essayer ZXing
+    const loaded = await tryLoadZXing();
+    if (loaded && typeof ZXing !== 'undefined') {
+      try {
+        zxingReader = new ZXing.BrowserMultiFormatReader();
+        useZXing = true;
+        console.log('[Scanner] ZXing chargé ✓');
+      } catch(e) {
+        useZXing = false;
+        console.log('[Scanner] ZXing init failed, fallback pur JS');
+      }
+    } else {
+      useZXing = false;
+      console.log('[Scanner] ZXing indisponible, moteur JS pur');
+    }
+  }
+
+  function start() {
+    if (timer) stop();
+    if (useZXing && zxingReader) {
+      startZXing();
+    } else {
+      timer = setInterval(scanFrameJS, 100);
+    }
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    if (zxingReader) { try { zxingReader.reset(); } catch(e){} }
+    if (canvas && canvas.parentNode) { canvas.parentNode.removeChild(canvas); canvas = null; ctx = null; }
+    useZXing = false;
+    zxingReader = null;
+  }
+
+  // ── ZXing scan loop ──
+  function startZXing() {
+    timer = setInterval(async () => {
+      if (!video || video.readyState < 2 || video.paused) return;
+      if (!canvas) return;
+      const vw = video.videoWidth, vh = video.videoHeight;
+      if (!vw || !vh) return;
+      canvas.width = vw; canvas.height = vh;
+      ctx.drawImage(video, 0, 0, vw, vh);
+      try {
+        const imgData = canvas.toDataURL('image/png');
+        const result = await zxingReader.decodeFromImageUrl(imgData);
+        if (result) {
+          const code = result.getText();
+          emit(code);
+        }
+      } catch(e) { /* No barcode found */ }
+    }, 200);
+  }
+
+  // ── Scan pur JS amélioré ──
+  function scanFrameJS() {
+    if (!video || !ctx || video.readyState < 2) return;
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if (!vw || !vh) return;
+    canvas.width = vw; canvas.height = vh;
+    ctx.drawImage(video, 0, 0, vw, vh);
+
+    // Scanner 15 lignes horizontales dans la zone centrale (30% à 70%)
+    const scanOffsets = [-0.20,-0.16,-0.12,-0.08,-0.04,0,0.04,0.08,0.12,0.16,0.20];
+    for (const off of scanOffsets) {
+      const y = Math.round(vh * (0.5 + off));
+      const result = decodeLine(y, vw);
+      if (result) { emit(result); return; }
+    }
+  }
+
+  function emit(code) {
+    const now = Date.now();
+    if (code === lastCode && now - lastTime < DEBOUNCE) return;
+    lastCode = code; lastTime = now;
+    if (callback) callback(code);
+  }
+
+  // ══════════════════════════════════════
+  //  DÉCODEUR EAN-13 PUR JS — VERSION 2
+  // ══════════════════════════════════════
+
+  // Tables EAN-13
+  const L_CODES = ['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
+  const G_CODES = ['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'];
+  const R_CODES = ['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'];
+
+  // Première parité selon le premier chiffre
+  const FIRST_DIGIT_PARITY = [
     'LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG',
     'LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'
   ];
 
-  // ── Canvas scanner state ──
-  let scanCanvas = null;
-  let scanCtx = null;
-  let scanVideoEl = null;
-  let scanTimer = null;
-  let onDetectCallback = null;
-  let lastDetected = null;
-  let lastDetectedTime = 0;
-  const DEBOUNCE_MS = 1500;
+  function decodeLine(y, width) {
+    const imgData = ctx.getImageData(0, y, width, 1);
+    const pixels = imgData.data;
 
-  // ── Initialize scanner canvas ──
-  function init(videoElement, callback) {
-    scanVideoEl = videoElement;
-    onDetectCallback = callback;
-    scanCanvas = document.createElement('canvas');
-    scanCanvas.style.display = 'none';
-    document.body.appendChild(scanCanvas);
-    scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
-  }
+    // Convertir en binaire avec seuillage adaptatif local
+    const binary = toBinary(pixels, width);
 
-  // ── Start scanning loop ──
-  function start() {
-    if (scanTimer) stop();
-    scanTimer = setInterval(scanFrame, 120); // ~8fps for battery efficiency
-  }
+    // Essayer LTR et RTL
+    const ltr = tryDecodeEAN13(binary, width);
+    if (ltr) return ltr;
 
-  // ── Stop scanning ──
-  function stop() {
-    if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
-    if (scanCanvas && scanCanvas.parentNode) {
-      scanCanvas.parentNode.removeChild(scanCanvas);
-      scanCanvas = null; scanCtx = null;
-    }
-  }
-
-  // ── Scan one video frame ──
-  function scanFrame() {
-    if (!scanVideoEl || !scanCtx) return;
-    if (scanVideoEl.readyState < 2 || scanVideoEl.paused) return;
-
-    const vw = scanVideoEl.videoWidth;
-    const vh = scanVideoEl.videoHeight;
-    if (!vw || !vh) return;
-
-    // Resize canvas to video
-    if (scanCanvas.width !== vw || scanCanvas.height !== vh) {
-      scanCanvas.width = vw;
-      scanCanvas.height = vh;
-    }
-
-    // Draw frame
-    scanCtx.drawImage(scanVideoEl, 0, 0, vw, vh);
-
-    // Scan multiple horizontal lines (center ± offsets)
-    const lines = [0, -0.08, 0.08, -0.15, 0.15, -0.22, 0.22];
-    for (const offset of lines) {
-      const y = Math.round(vh * (0.5 + offset));
-      const result = scanLine(y, vw, vh);
-      if (result) {
-        const now = Date.now();
-        if (result !== lastDetected || now - lastDetectedTime > DEBOUNCE_MS) {
-          lastDetected = result;
-          lastDetectedTime = now;
-          if (onDetectCallback) onDetectCallback(result);
-          return;
-        }
-      }
-    }
-  }
-
-  // ── Scan a single horizontal line ──
-  function scanLine(y, w, h) {
-    const imageData = scanCtx.getImageData(0, y, w, 1);
-    const pixels = imageData.data;
-
-    // Convert to grayscale + threshold
-    const threshold = computeThreshold(pixels, w);
-    const binary = new Uint8Array(w);
-    for (let x = 0; x < w; x++) {
-      const i = x * 4;
-      const gray = (pixels[i] * 77 + pixels[i+1] * 150 + pixels[i+2] * 29) >> 8;
-      binary[x] = gray < threshold ? 1 : 0; // 1=dark, 0=light
-    }
-
-    // Find runs of same color
-    const runs = getRuns(binary, w);
-    if (runs.length < 20) return null;
-
-    // Try EAN-13 decode
-    const ean = tryDecodeEAN13(runs);
-    if (ean) return ean;
-
-    // Try EAN-8
-    const ean8 = tryDecodeEAN8(runs);
-    if (ean8) return ean8;
+    const rtl = tryDecodeEAN13(binary.slice().reverse(), width);
+    if (rtl) return rtl;
 
     return null;
   }
 
-  // ── Compute adaptive threshold (Otsu-like) ──
-  function computeThreshold(pixels, w) {
-    let sum = 0;
-    for (let x = 0; x < w; x++) {
-      const i = x * 4;
-      sum += (pixels[i] * 77 + pixels[i+1] * 150 + pixels[i+2] * 29) >> 8;
+  function toBinary(pixels, width) {
+    // Seuillage par blocs (adaptatif)
+    const blockSize = Math.max(20, Math.floor(width / 30));
+    const result = new Uint8Array(width);
+
+    for (let x = 0; x < width; x++) {
+      // Calculer la moyenne locale
+      const start = Math.max(0, x - blockSize);
+      const end = Math.min(width - 1, x + blockSize);
+      let sum = 0;
+      for (let i = start; i <= end; i++) {
+        const idx = i * 4;
+        sum += (pixels[idx] * 77 + pixels[idx+1] * 150 + pixels[idx+2] * 29) >> 8;
+      }
+      const localMean = sum / (end - start + 1);
+      const idx = x * 4;
+      const gray = (pixels[idx] * 77 + pixels[idx+1] * 150 + pixels[idx+2] * 29) >> 8;
+      result[x] = gray < localMean * 0.85 ? 1 : 0;
     }
-    return (sum / w) * 0.85; // slightly below average = good threshold
+    return result;
   }
 
-  // ── Get runs of consecutive same-value pixels ──
-  function getRuns(binary, w) {
+  // Extraire les runs (séquences de même valeur)
+  function getRuns(binary) {
     const runs = [];
-    let cur = binary[0], count = 1;
-    for (let x = 1; x < w; x++) {
-      if (binary[x] === cur) {
-        count++;
-      } else {
-        runs.push({ val: cur, len: count });
-        cur = binary[x];
-        count = 1;
-      }
+    if (!binary.length) return runs;
+    let val = binary[0], len = 1;
+    for (let i = 1; i < binary.length; i++) {
+      if (binary[i] === val) { len++; }
+      else { runs.push(len); val = binary[i]; len = 1; }
     }
-    runs.push({ val: cur, len: count });
+    runs.push(len);
+    return runs; // runs[0] = white/light, alternating dark/light
+  }
+
+  function tryDecodeEAN13(binary, width) {
+    const runs = getRuns(binary);
+    if (runs.length < 59) return null; // EAN-13 needs at least 59 bars
+
+    // Trouver la garde gauche (101)
+    for (let startR = 0; startR < runs.length - 55; startR++) {
+      // Ignorer les quiet zones (longs runs blancs au début)
+      // La garde est: dark-light-dark (index startR = dark)
+      // Si startR est pair, on est sur dark; impair = light
+
+      // Trouver position où commence une barre sombre
+      // runs alterne: runs[0] peut être blanc ou noir
+      // On suppose binary[0]=0 (white), donc runs[0]=blanc, runs[1]=noir, etc.
+      // Guard = pattern 1-1-1 (3 modules)
+
+      const guardRuns = runs.slice(startR, startR + 3);
+      if (guardRuns.length < 3) break;
+      const unitGuard = (guardRuns[0] + guardRuns[1] + guardRuns[2]) / 3;
+      if (unitGuard < 1) continue;
+
+      // Vérifier que c'est bien une garde (tolerances généreuses)
+      const tol = 0.7;
+      if (Math.abs(guardRuns[0]/unitGuard - 1) > tol) continue;
+      if (Math.abs(guardRuns[1]/unitGuard - 1) > tol) continue;
+      if (Math.abs(guardRuns[2]/unitGuard - 1) > tol) continue;
+
+      // Décoder 6 chiffres gauche
+      let pos = startR + 3;
+      const leftDigits = [];
+      const leftParities = [];
+      let unitSum = unitGuard * 3;
+      let unitCount = 3;
+
+      for (let d = 0; d < 6; d++) {
+        if (pos + 3 >= runs.length) { leftDigits.push(-1); leftParities.push('?'); pos += 4; continue; }
+        const bars = runs.slice(pos, pos + 4);
+        const barsSum = bars.reduce((a,b)=>a+b, 0);
+        const unit = barsSum / 7; // EAN digit = 7 modules
+        unitSum += barsSum; unitCount += 7;
+
+        const bits = bars.map(b => Math.round(b / unit));
+        const bitStr = bits.join('');
+
+        // Chercher dans L et G
+        let found = false;
+        for (let dig = 0; dig < 10; dig++) {
+          // Convertir L_CODES en runs
+          const lRuns = codeToRuns(L_CODES[dig]);
+          const gRuns = codeToRuns(G_CODES[dig]);
+          if (runsMatch(bars, lRuns, unit)) { leftDigits.push(dig); leftParities.push('L'); found=true; break; }
+          if (runsMatch(bars, gRuns, unit)) { leftDigits.push(dig); leftParities.push('G'); found=true; break; }
+        }
+        if (!found) { leftDigits.push(-1); leftParities.push('?'); }
+        pos += 4;
+      }
+
+      if (leftDigits.includes(-1) || leftParities.includes('?')) continue;
+
+      // Garde centrale (01010 = 5 modules)
+      if (pos + 4 >= runs.length) continue;
+      pos += 5; // skip middle guard
+
+      // Décoder 6 chiffres droite
+      const rightDigits = [];
+      for (let d = 0; d < 6; d++) {
+        if (pos + 3 >= runs.length) { rightDigits.push(-1); pos += 4; continue; }
+        const bars = runs.slice(pos, pos + 4);
+        const unit = bars.reduce((a,b)=>a+b,0) / 7;
+        let found = false;
+        for (let dig = 0; dig < 10; dig++) {
+          const rRuns = codeToRuns(R_CODES[dig]);
+          if (runsMatch(bars, rRuns, unit)) { rightDigits.push(dig); found=true; break; }
+        }
+        if (!found) { rightDigits.push(-1); }
+        pos += 4;
+      }
+
+      if (rightDigits.includes(-1)) continue;
+
+      // Déterminer le 1er chiffre depuis la parité
+      const parStr = leftParities.join('');
+      const firstDigit = FIRST_DIGIT_PARITY.indexOf(parStr);
+      if (firstDigit === -1) continue;
+
+      const all = [firstDigit, ...leftDigits, ...rightDigits];
+
+      // Vérifier checksum
+      if (checksum(all)) return all.join('');
+    }
+    return null;
+  }
+
+  // Convertir un code binaire '0001101' en runs [3,3,1,1] (longueurs de barres)
+  function codeToRuns(code) {
+    const runs = [];
+    let len = 1;
+    for (let i = 1; i < code.length; i++) {
+      if (code[i] === code[i-1]) { len++; }
+      else { runs.push(len); len = 1; }
+    }
+    runs.push(len);
     return runs;
   }
 
-  // ── Find quiet zone + guard bars in runs ──
-  function findGuard(runs, startIdx) {
-    // Look for pattern: dark-light-dark (1-1-1 proportions)
-    for (let i = startIdx; i < runs.length - 2; i++) {
-      const a = runs[i], b = runs[i+1], c = runs[i+2];
-      if (a.val === 1 && b.val === 0 && c.val === 1) {
-        const unit = (a.len + b.len + c.len) / 3;
-        if (Math.abs(a.len - unit) < unit * 0.4 &&
-            Math.abs(b.len - unit) < unit * 0.4 &&
-            Math.abs(c.len - unit) < unit * 0.4) {
-          return { idx: i, unit };
-        }
-      }
+  // Comparer des runs réels avec les runs théoriques (tolérance proportionnelle)
+  function runsMatch(actual, theoretical, unit) {
+    if (actual.length !== theoretical.length) return false;
+    for (let i = 0; i < actual.length; i++) {
+      const expected = theoretical[i] * unit;
+      const tolerance = Math.max(unit * 0.5, 1);
+      if (Math.abs(actual[i] - expected) > tolerance) return false;
     }
-    return null;
+    return true;
   }
 
-  // ── Decode 4 bars into a digit (EAN L/G/R encoding) ──
-  function decodeDigit(runs, idx, unit, table) {
-    if (idx + 3 >= runs.length) return null;
-    const bars = [
-      Math.round(runs[idx].len / unit),
-      Math.round(runs[idx+1].len / unit),
-      Math.round(runs[idx+2].len / unit),
-      Math.round(runs[idx+3].len / unit),
-    ];
-    const total = bars.reduce((a,b)=>a+b,0);
-    if (total < 6 || total > 10) return null; // should be 7 units
-
-    for (let d = 0; d < 10; d++) {
-      const pat = table[d];
-      let match = true;
-      for (let i = 0; i < 4; i++) {
-        if (Math.abs(bars[i] - pat[i]) > 1) { match = false; break; }
-      }
-      if (match) return d;
-    }
-    return null;
+  // EAN checksum
+  function checksum(digits) {
+    let s = 0;
+    for (let i = 0; i < 12; i++) s += digits[i] * (i % 2 === 0 ? 1 : 3);
+    return (10 - (s % 10)) % 10 === digits[12];
   }
 
-  // ── Try decode EAN-13 ──
-  function tryDecodeEAN13(runs) {
-    // Find left guard (dark-light-dark)
-    for (let startSearch = 0; startSearch < runs.length - 60; startSearch++) {
-      const guard = findGuard(runs, startSearch);
-      if (!guard) break;
-
-      const { idx, unit } = guard;
-      let pos = idx + 3; // skip left guard
-      const digits = [];
-      const parities = [];
-
-      // Decode 6 left digits (L or G encoding)
-      for (let i = 0; i < 6; i++) {
-        // Try L encoding
-        const dl = decodeDigit(runs, pos, unit, EAN13_L);
-        if (dl !== null) { digits.push(dl); parities.push('L'); pos += 4; continue; }
-        // Try G encoding
-        const dg = decodeDigit(runs, pos, unit, EAN13_G);
-        if (dg !== null) { digits.push(dg); parities.push('G'); pos += 4; continue; }
-        digits.push(-1); parities.push('?'); pos += 4;
-      }
-
-      // Middle guard (light-dark-light-dark-light = 5 bars)
-      pos += 5;
-
-      // Decode 6 right digits (R encoding)
-      for (let i = 0; i < 6; i++) {
-        const dr = decodeDigit(runs, pos, unit, EAN13_R);
-        if (dr !== null) { digits.push(dr); pos += 4; continue; }
-        digits.push(-1); pos += 4;
-      }
-
-      if (digits.includes(-1)) { startSearch = idx + 1; continue; }
-
-      // Determine first digit from parity pattern
-      const parityStr = parities.join('');
-      const firstDigit = EAN13_FIRST.indexOf(parityStr);
-      if (firstDigit === -1) { startSearch = idx + 1; continue; }
-
-      const allDigits = [firstDigit, ...digits];
-
-      // Verify checksum
-      if (checkEAN(allDigits)) {
-        return allDigits.join('');
-      }
-
-      startSearch = idx + 1;
-    }
-    return null;
-  }
-
-  // ── Try decode EAN-8 ──
-  function tryDecodeEAN8(runs) {
-    for (let startSearch = 0; startSearch < runs.length - 40; startSearch++) {
-      const guard = findGuard(runs, startSearch);
-      if (!guard) break;
-      const { idx, unit } = guard;
-      let pos = idx + 3;
-      const digits = [];
-
-      for (let i = 0; i < 4; i++) {
-        const d = decodeDigit(runs, pos, unit, EAN13_L);
-        if (d !== null) { digits.push(d); pos += 4; } else { digits.push(-1); pos += 4; }
-      }
-      pos += 5; // middle guard
-      for (let i = 0; i < 4; i++) {
-        const d = decodeDigit(runs, pos, unit, EAN13_R);
-        if (d !== null) { digits.push(d); pos += 4; } else { digits.push(-1); pos += 4; }
-      }
-
-      if (!digits.includes(-1) && checkEAN(digits)) {
-        return digits.join('');
-      }
-      startSearch = idx + 1;
-    }
-    return null;
-  }
-
-  // ── EAN checksum validation ──
-  function checkEAN(digits) {
-    const n = digits.length;
-    let sum = 0;
-    for (let i = 0; i < n - 1; i++) {
-      sum += digits[i] * (i % 2 === (n % 2 === 0 ? 0 : 1) ? 3 : 1);
-    }
-    const check = (10 - (sum % 10)) % 10;
-    return check === digits[n - 1];
-  }
-
-  // ── Public API ──
   return { init, start, stop };
 
 })();
+
 
 
 // ══════════════════════════════════════
@@ -1757,7 +1792,7 @@ async function startScanner(){
       },350);
     }else{
       // Fallback pur JS — Safari iOS, Firefox, etc.
-      BarcodeScanner.init(video, function(code){
+      await BarcodeScanner.init(video, function(code){
         if(code&&code.length>=8){
           stopScanner();
           if(code.startsWith('LOC:')){handleLocationQR(code);}
@@ -1765,8 +1800,7 @@ async function startScanner(){
         }
       });
       BarcodeScanner.start();
-      // Stocker ref pour stopScanner
-      scanInterval='purejs'; // flag pour savoir qu'on utilise le moteur JS
+      scanInterval='purejs';
     }
 
   }catch(err){
@@ -3153,9 +3187,12 @@ async function analyzeProductPhoto(){
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1000,
         messages: [{
           role: 'user',
