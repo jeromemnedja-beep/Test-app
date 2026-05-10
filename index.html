@@ -1179,6 +1179,295 @@ body{background:var(--white);color:var(--black);font-family:var(--sans);font-wei
 <div class="toast" id="toast"></div>
 
 <script>
+// ══════════════════════════════════════════════════════════
+//  PURE JS BARCODE SCANNER — EAN-13 / EAN-8 / Code128
+//  No dependencies — works on Safari iOS 14+
+//  Uses canvas frame capture + bar pattern analysis
+// ══════════════════════════════════════════════════════════
+
+const BarcodeScanner = (function() {
+
+  // ── EAN-13 encoding tables ──
+  const EAN13_L = [
+    [3,2,1,1],[2,2,2,1],[2,1,2,2],[1,4,1,1],[1,1,3,2],
+    [1,2,3,1],[1,1,1,4],[1,3,1,2],[1,2,1,3],[3,1,1,2]
+  ];
+  const EAN13_G = [
+    [1,1,2,3],[1,2,2,2],[2,2,1,2],[1,1,4,1],[2,3,1,1],
+    [1,3,2,1],[4,1,1,1],[2,1,3,1],[3,1,2,1],[2,1,1,3]
+  ];
+  const EAN13_R = [
+    [3,2,1,1],[2,2,2,1],[2,1,2,2],[1,4,1,1],[1,1,3,2],
+    [1,2,3,1],[1,1,1,4],[1,3,1,2],[1,2,1,3],[3,1,1,2]
+  ].map(p=>[p[0],p[1],p[2],p[3]].reverse()); // R = L mirrored
+
+  const EAN13_FIRST = [
+    'LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG',
+    'LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'
+  ];
+
+  // ── Canvas scanner state ──
+  let scanCanvas = null;
+  let scanCtx = null;
+  let scanVideoEl = null;
+  let scanTimer = null;
+  let onDetectCallback = null;
+  let lastDetected = null;
+  let lastDetectedTime = 0;
+  const DEBOUNCE_MS = 1500;
+
+  // ── Initialize scanner canvas ──
+  function init(videoElement, callback) {
+    scanVideoEl = videoElement;
+    onDetectCallback = callback;
+    scanCanvas = document.createElement('canvas');
+    scanCanvas.style.display = 'none';
+    document.body.appendChild(scanCanvas);
+    scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true });
+  }
+
+  // ── Start scanning loop ──
+  function start() {
+    if (scanTimer) stop();
+    scanTimer = setInterval(scanFrame, 120); // ~8fps for battery efficiency
+  }
+
+  // ── Stop scanning ──
+  function stop() {
+    if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+    if (scanCanvas && scanCanvas.parentNode) {
+      scanCanvas.parentNode.removeChild(scanCanvas);
+      scanCanvas = null; scanCtx = null;
+    }
+  }
+
+  // ── Scan one video frame ──
+  function scanFrame() {
+    if (!scanVideoEl || !scanCtx) return;
+    if (scanVideoEl.readyState < 2 || scanVideoEl.paused) return;
+
+    const vw = scanVideoEl.videoWidth;
+    const vh = scanVideoEl.videoHeight;
+    if (!vw || !vh) return;
+
+    // Resize canvas to video
+    if (scanCanvas.width !== vw || scanCanvas.height !== vh) {
+      scanCanvas.width = vw;
+      scanCanvas.height = vh;
+    }
+
+    // Draw frame
+    scanCtx.drawImage(scanVideoEl, 0, 0, vw, vh);
+
+    // Scan multiple horizontal lines (center ± offsets)
+    const lines = [0, -0.08, 0.08, -0.15, 0.15, -0.22, 0.22];
+    for (const offset of lines) {
+      const y = Math.round(vh * (0.5 + offset));
+      const result = scanLine(y, vw, vh);
+      if (result) {
+        const now = Date.now();
+        if (result !== lastDetected || now - lastDetectedTime > DEBOUNCE_MS) {
+          lastDetected = result;
+          lastDetectedTime = now;
+          if (onDetectCallback) onDetectCallback(result);
+          return;
+        }
+      }
+    }
+  }
+
+  // ── Scan a single horizontal line ──
+  function scanLine(y, w, h) {
+    const imageData = scanCtx.getImageData(0, y, w, 1);
+    const pixels = imageData.data;
+
+    // Convert to grayscale + threshold
+    const threshold = computeThreshold(pixels, w);
+    const binary = new Uint8Array(w);
+    for (let x = 0; x < w; x++) {
+      const i = x * 4;
+      const gray = (pixels[i] * 77 + pixels[i+1] * 150 + pixels[i+2] * 29) >> 8;
+      binary[x] = gray < threshold ? 1 : 0; // 1=dark, 0=light
+    }
+
+    // Find runs of same color
+    const runs = getRuns(binary, w);
+    if (runs.length < 20) return null;
+
+    // Try EAN-13 decode
+    const ean = tryDecodeEAN13(runs);
+    if (ean) return ean;
+
+    // Try EAN-8
+    const ean8 = tryDecodeEAN8(runs);
+    if (ean8) return ean8;
+
+    return null;
+  }
+
+  // ── Compute adaptive threshold (Otsu-like) ──
+  function computeThreshold(pixels, w) {
+    let sum = 0;
+    for (let x = 0; x < w; x++) {
+      const i = x * 4;
+      sum += (pixels[i] * 77 + pixels[i+1] * 150 + pixels[i+2] * 29) >> 8;
+    }
+    return (sum / w) * 0.85; // slightly below average = good threshold
+  }
+
+  // ── Get runs of consecutive same-value pixels ──
+  function getRuns(binary, w) {
+    const runs = [];
+    let cur = binary[0], count = 1;
+    for (let x = 1; x < w; x++) {
+      if (binary[x] === cur) {
+        count++;
+      } else {
+        runs.push({ val: cur, len: count });
+        cur = binary[x];
+        count = 1;
+      }
+    }
+    runs.push({ val: cur, len: count });
+    return runs;
+  }
+
+  // ── Find quiet zone + guard bars in runs ──
+  function findGuard(runs, startIdx) {
+    // Look for pattern: dark-light-dark (1-1-1 proportions)
+    for (let i = startIdx; i < runs.length - 2; i++) {
+      const a = runs[i], b = runs[i+1], c = runs[i+2];
+      if (a.val === 1 && b.val === 0 && c.val === 1) {
+        const unit = (a.len + b.len + c.len) / 3;
+        if (Math.abs(a.len - unit) < unit * 0.4 &&
+            Math.abs(b.len - unit) < unit * 0.4 &&
+            Math.abs(c.len - unit) < unit * 0.4) {
+          return { idx: i, unit };
+        }
+      }
+    }
+    return null;
+  }
+
+  // ── Decode 4 bars into a digit (EAN L/G/R encoding) ──
+  function decodeDigit(runs, idx, unit, table) {
+    if (idx + 3 >= runs.length) return null;
+    const bars = [
+      Math.round(runs[idx].len / unit),
+      Math.round(runs[idx+1].len / unit),
+      Math.round(runs[idx+2].len / unit),
+      Math.round(runs[idx+3].len / unit),
+    ];
+    const total = bars.reduce((a,b)=>a+b,0);
+    if (total < 6 || total > 10) return null; // should be 7 units
+
+    for (let d = 0; d < 10; d++) {
+      const pat = table[d];
+      let match = true;
+      for (let i = 0; i < 4; i++) {
+        if (Math.abs(bars[i] - pat[i]) > 1) { match = false; break; }
+      }
+      if (match) return d;
+    }
+    return null;
+  }
+
+  // ── Try decode EAN-13 ──
+  function tryDecodeEAN13(runs) {
+    // Find left guard (dark-light-dark)
+    for (let startSearch = 0; startSearch < runs.length - 60; startSearch++) {
+      const guard = findGuard(runs, startSearch);
+      if (!guard) break;
+
+      const { idx, unit } = guard;
+      let pos = idx + 3; // skip left guard
+      const digits = [];
+      const parities = [];
+
+      // Decode 6 left digits (L or G encoding)
+      for (let i = 0; i < 6; i++) {
+        // Try L encoding
+        const dl = decodeDigit(runs, pos, unit, EAN13_L);
+        if (dl !== null) { digits.push(dl); parities.push('L'); pos += 4; continue; }
+        // Try G encoding
+        const dg = decodeDigit(runs, pos, unit, EAN13_G);
+        if (dg !== null) { digits.push(dg); parities.push('G'); pos += 4; continue; }
+        digits.push(-1); parities.push('?'); pos += 4;
+      }
+
+      // Middle guard (light-dark-light-dark-light = 5 bars)
+      pos += 5;
+
+      // Decode 6 right digits (R encoding)
+      for (let i = 0; i < 6; i++) {
+        const dr = decodeDigit(runs, pos, unit, EAN13_R);
+        if (dr !== null) { digits.push(dr); pos += 4; continue; }
+        digits.push(-1); pos += 4;
+      }
+
+      if (digits.includes(-1)) { startSearch = idx + 1; continue; }
+
+      // Determine first digit from parity pattern
+      const parityStr = parities.join('');
+      const firstDigit = EAN13_FIRST.indexOf(parityStr);
+      if (firstDigit === -1) { startSearch = idx + 1; continue; }
+
+      const allDigits = [firstDigit, ...digits];
+
+      // Verify checksum
+      if (checkEAN(allDigits)) {
+        return allDigits.join('');
+      }
+
+      startSearch = idx + 1;
+    }
+    return null;
+  }
+
+  // ── Try decode EAN-8 ──
+  function tryDecodeEAN8(runs) {
+    for (let startSearch = 0; startSearch < runs.length - 40; startSearch++) {
+      const guard = findGuard(runs, startSearch);
+      if (!guard) break;
+      const { idx, unit } = guard;
+      let pos = idx + 3;
+      const digits = [];
+
+      for (let i = 0; i < 4; i++) {
+        const d = decodeDigit(runs, pos, unit, EAN13_L);
+        if (d !== null) { digits.push(d); pos += 4; } else { digits.push(-1); pos += 4; }
+      }
+      pos += 5; // middle guard
+      for (let i = 0; i < 4; i++) {
+        const d = decodeDigit(runs, pos, unit, EAN13_R);
+        if (d !== null) { digits.push(d); pos += 4; } else { digits.push(-1); pos += 4; }
+      }
+
+      if (!digits.includes(-1) && checkEAN(digits)) {
+        return digits.join('');
+      }
+      startSearch = idx + 1;
+    }
+    return null;
+  }
+
+  // ── EAN checksum validation ──
+  function checkEAN(digits) {
+    const n = digits.length;
+    let sum = 0;
+    for (let i = 0; i < n - 1; i++) {
+      sum += digits[i] * (i % 2 === (n % 2 === 0 ? 0 : 1) ? 3 : 1);
+    }
+    const check = (10 - (sum % 10)) % 10;
+    return check === digits[n - 1];
+  }
+
+  // ── Public API ──
+  return { init, start, stop };
+
+})();
+
+
 // ══════════════════════════════════════
 //  MODE Stock v4 — Logic
 // ══════════════════════════════════════
@@ -1406,34 +1695,20 @@ async function startScanner(){
   const idle=document.getElementById('sc-idle'),ui=document.getElementById('sc-ui');
   const btn=document.getElementById('sc-toggle'),vp=document.getElementById('scanner-vp');
 
-  // ── Pré-vérifications ──
-  // 1. API disponible ?
+  // Vérifications préalables
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    showCameraError('Caméra non disponible sur cet appareil ou ce navigateur.','Utilisez Safari sur iPhone pour activer le scanner.');
+    showCameraError('Caméra non disponible','Utilisez Safari sur iPhone.');
     return;
   }
-  // 2. Contexte sécurisé (HTTPS ou localhost) ?
   if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1'){
-    showCameraError('HTTPS requis pour accéder à la caméra.','Hébergez l\'application sur GitHub Pages ou un serveur HTTPS.');
+    showCameraError('HTTPS requis','Hébergez sur GitHub Pages (HTTPS) pour activer la caméra.');
     return;
   }
-  // 3. Détection iframe sandbox (artifact viewer claude.ai)
   try{
     const inIframe=window.self!==window.top;
     if(inIframe){
-      // Vérifier si l'iframe a la permission camera
-      let hasCamPermission=false;
-      try{
-        const perm=await navigator.permissions.query({name:'camera'});
-        hasCamPermission=(perm.state==='granted');
-      }catch(e){}
-      if(!hasCamPermission){
-        showCameraError(
-          'La caméra est bloquée dans cet aperçu.',
-          'Ouvrez l\'application directement dans Safari sur votre iPhone (via GitHub Pages) pour activer le scanner. La saisie manuelle fonctionne ici.'
-        );
-        return;
-      }
+      showCameraError('Caméra bloquée dans cet aperçu','Ouvrez l\'app directement dans Safari via GitHub Pages. La saisie manuelle fonctionne ici.');
+      return;
     }
   }catch(e){}
 
@@ -1441,14 +1716,13 @@ async function startScanner(){
   btn.innerHTML='<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/></svg> Arrêter';
 
   try{
-    // Essayer caméra arrière d'abord, puis toute caméra
+    // Essayer caméra arrière, fallback sur toute caméra
     let stream=null;
     try{
       stream=await navigator.mediaDevices.getUserMedia({
         video:{facingMode:{exact:'environment'},width:{ideal:1280},height:{ideal:720}}
       });
     }catch(e){
-      // facingMode exact échoue sur certains appareils → fallback
       stream=await navigator.mediaDevices.getUserMedia({
         video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
       });
@@ -1464,42 +1738,50 @@ async function startScanner(){
     await video.play();
     scannerOn=true;
 
+    // ── Stratégie de décodage ──
+    // 1. BarcodeDetector (Chrome Android, Chrome desktop) — natif, rapide
+    // 2. BarcodeScanner (pure JS) — fallback Safari iOS & Firefox
     if('BarcodeDetector' in window){
+      // BarcodeDetector disponible (Chrome/Android)
       const bd=new BarcodeDetector({formats:['ean_13','ean_8','qr_code','code_128','upc_a','upc_e']});
       scanInterval=setInterval(async()=>{
         if(!video.readyState||video.readyState<2)return;
         try{
           const codes=await bd.detect(video);
           if(codes&&codes.length>0){
-            const c=codes[0].rawValue;
-            stopScanner();
+            const c=codes[0].rawValue;stopScanner();
             if(c.startsWith('LOC:')){handleLocationQR(c);}
             else if(c.length>=8){handleEAN(c);}
           }
         }catch(e){}
       },350);
     }else{
-      // Pas de BarcodeDetector (Firefox, vieux Safari) → afficher message
-      toast('Scanner actif — BarcodeDetector non disponible sur ce navigateur');
-      // Ouvrir saisie manuelle en secours
-      setTimeout(()=>toggleManual(),1500);
+      // Fallback pur JS — Safari iOS, Firefox, etc.
+      BarcodeScanner.init(video, function(code){
+        if(code&&code.length>=8){
+          stopScanner();
+          if(code.startsWith('LOC:')){handleLocationQR(code);}
+          else{handleEAN(code);}
+        }
+      });
+      BarcodeScanner.start();
+      // Stocker ref pour stopScanner
+      scanInterval='purejs'; // flag pour savoir qu'on utilise le moteur JS
     }
+
   }catch(err){
     stopScanner();
     let titre='Caméra inaccessible';
     let detail='';
     if(err.name==='NotAllowedError'||err.name==='PermissionDeniedError'){
       titre='Permission refusée';
-      detail='Autorisez l\'accès à la caméra dans Réglages → Safari → Caméra, puis réessayez.';
-    }else if(err.name==='NotFoundError'||err.name==='DevicesNotFoundError'){
+      detail='Allez dans Réglages → Safari → Caméra → Autoriser, puis réessayez.';
+    }else if(err.name==='NotFoundError'){
       titre='Aucune caméra trouvée';
-      detail='Cet appareil ne dispose pas de caméra détectable.';
-    }else if(err.name==='NotReadableError'||err.name==='TrackStartError'){
+      detail='Cet appareil ne dispose pas de caméra.';
+    }else if(err.name==='NotReadableError'){
       titre='Caméra occupée';
-      detail='La caméra est utilisée par une autre application. Fermez-la et réessayez.';
-    }else if(err.name==='OverconstrainedError'){
-      titre='Configuration caméra';
-      detail='Impossible d\'activer la caméra arrière. Réessayez.';
+      detail='La caméra est utilisée par une autre app. Fermez-la et réessayez.';
     }else{
       detail=err.message||err.name||'Erreur inconnue';
     }
@@ -1532,7 +1814,12 @@ function resetScanIdle(){
   idle.onclick=startScanner;
 }
 function stopScanner(){
-  if(scanInterval){clearInterval(scanInterval);scanInterval=null;}
+  if(scanInterval==='purejs'){
+    BarcodeScanner.stop(); // arrêter le moteur JS
+    scanInterval=null;
+  } else if(scanInterval){
+    clearInterval(scanInterval);scanInterval=null;
+  }
   if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}
   const vp=document.getElementById('scanner-vp');
   const vid=vp.querySelector('video');if(vid)vid.remove();
