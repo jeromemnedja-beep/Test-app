@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="MODE Stock">
 <title>MODE — Gestion de Stock</title>
+<script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.2.4000/dist/dbr.bundle.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500&display=swap');
 :root {
@@ -484,6 +485,16 @@ body{background:var(--white);color:var(--black);font-family:var(--sans);font-wei
 .pwa-standalone #app-header { padding-top: max(env(safe-area-inset-top), 44px); }
 .pwa-standalone #app-nav { padding-bottom: max(env(safe-area-inset-bottom), 20px); }
 
+
+/* Scan feedback */
+.scan-result-flash{position:absolute;inset:0;background:rgba(255,255,255,.6);z-index:10;display:flex;align-items:center;justify-content:center;font-size:36px;animation:flashFade .6s ease forwards}
+@keyframes flashFade{0%{opacity:1}100%{opacity:0;pointer-events:none}}
+.scan-loading{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#000}
+.scan-spinner{width:32px;height:32px;border:2px solid #444;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Guide emplacement cliquable */
+.loc-guide:hover{background:var(--greenbg)!important;transition:background .15s}
 </style>
 <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiTU9ERSBTdG9jayIsInNob3J0X25hbWUiOiJNT0RFIiwiZGVzY3JpcHRpb24iOiJHZXN0aW9uIGRlIHN0b2NrIHBpXHUwMGU4Y2VzIGRcdTAwZTl0YWNoXHUwMGU5ZXMgTU9ERSBBdGVsaWVyIiwic3RhcnRfdXJsIjoiLi8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsIm9yaWVudGF0aW9uIjoicG9ydHJhaXQiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2ZmZmZmZiIsInRoZW1lX2NvbG9yIjoiIzAwMDAwMCIsImxhbmciOiJmciIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWwsJTNDc3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDE5MiAxOTInJTNFJTNDcmVjdCB3aWR0aD0nMTkyJyBoZWlnaHQ9JzE5MicgZmlsbD0nJTIzMDAwJy8lM0UlM0N0ZXh0IHg9JzUwJTI1JyB5PSc1NCUyNScgdGV4dC1hbmNob3I9J21pZGRsZScgZG9taW5hbnQtYmFzZWxpbmU9J21pZGRsZScgZm9udC1mYW1pbHk9J0dlb3JnaWEsc2VyaWYnIGZvbnQtc2l6ZT0nNzInIGZpbGw9JyUyM2ZmZicgbGV0dGVyLXNwYWNpbmc9JzQnJTNFTSUzQy90ZXh0JTNFJTNDL3N2ZyUzRSIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIiwicHVycG9zZSI6ImFueSBtYXNrYWJsZSJ9LHsic3JjIjoiZGF0YTppbWFnZS9zdmcreG1sLCUzQ3N2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1MTIgNTEyJyUzRSUzQ3JlY3Qgd2lkdGg9JzUxMicgaGVpZ2h0PSc1MTInIGZpbGw9JyUyMzAwMCcvJTNFJTNDdGV4dCB4PSc1MCUyNScgeT0nNTQlMjUnIHRleHQtYW5jaG9yPSdtaWRkbGUnIGRvbWluYW50LWJhc2VsaW5lPSdtaWRkbGUnIGZvbnQtZmFtaWx5PSdHZW9yZ2lhLHNlcmlmJyBmb250LXNpemU9JzIwMCcgZmlsbD0nJTIzZmZmJyBsZXR0ZXItc3BhY2luZz0nOCclM0VNJTNDL3RleHQlM0UlM0Mvc3ZnJTNFIiwic2l6ZXMiOiI1MTJ4NTEyIiwidHlwZSI6ImltYWdlL3N2Zyt4bWwiLCJwdXJwb3NlIjoiYW55IG1hc2thYmxlIn1dLCJjYXRlZ29yaWVzIjpbInByb2R1Y3Rpdml0eSIsInV0aWxpdGllcyJdLCJzY3JlZW5zaG90cyI6W10sInNob3J0Y3V0cyI6W3sibmFtZSI6IlJlY2V2b2lyIGR1IHN0b2NrIiwic2hvcnRfbmFtZSI6IlJlY2V2b2lyIiwiZGVzY3JpcHRpb24iOiJFbnRyXHUwMGU5ZSBkZSBzdG9jayByYXBpZGUiLCJ1cmwiOiIuLyNhY3Rpb249aW4ifSx7Im5hbWUiOiJFeHBcdTAwZTlkaWVyIGR1IHN0b2NrIiwic2hvcnRfbmFtZSI6IkV4cFx1MDBlOWRpZXIiLCJkZXNjcmlwdGlvbiI6IlNvcnRpZSBkZSBzdG9jayByYXBpZGUiLCJ1cmwiOiIuLyNhY3Rpb249b3V0In1dfQ==">
 
@@ -526,7 +537,7 @@ body{background:var(--white);color:var(--black);font-family:var(--sans);font-wei
     <div class="hdr-brand" id="hdr-brand">MODE</div>
     <div class="hdr-page-title" id="hdr-title"></div>
     <div class="hdr-right">
-      <div class="hdr-depot" id="hdr-depot"></div>
+      <div id="hdr-depot" style="display:none"></div>
       <div class="hdr-sync live" id="hdr-sync" title="Synchronisé"></div>
       <button class="hdr-menu" onclick="openMenu()" style="display:flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid var(--light);font-family:var(--sans);font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--black);cursor:pointer;background:var(--white)">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -541,19 +552,11 @@ body{background:var(--white);color:var(--black);font-family:var(--sans);font-wei
 
 <!-- ══ HOME ══ -->
 <div class="view active" id="view-home">
-  <div class="home-hero">
-    <div class="home-greeting" id="home-greeting"></div>
-    <div class="home-name" id="home-name"></div>
-    <div class="home-context">
-      <span class="home-tag" id="home-depot-tag">
-        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        <span id="home-depot-name"></span>
-      </span>
-      <span class="home-tag">
-        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span id="home-time"></span>
-      </span>
-    </div>
+  <div class="home-hero" style="padding:14px 20px 12px">
+    <div id="home-greeting" style="display:none"></div>
+    <div id="home-name" style="display:none"></div>
+    <div id="home-depot-name" style="display:none"></div>
+    <div id="home-time" style="display:none"></div>
   </div>
 
   <div class="home-quick-stats" id="home-quick-stats"></div>
@@ -607,18 +610,23 @@ body{background:var(--white);color:var(--black);font-family:var(--sans);font-wei
   </div>
   <div class="scan-wrap">
     <div id="scanner-vp">
-      <div class="scan-idle" id="sc-idle" onclick="startScanner()">
+      <!-- Dynamsoft camera view container -->
+      <div id="dce-view-container" style="width:100%;height:100%;position:absolute;top:0;left:0;display:none;z-index:5"></div>
+      <!-- Input photo iOS (caché) -->
+      <input type="file" id="sc-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoScan(this)">
+      <div class="scan-idle" id="sc-idle">
         <svg width="44" height="32" fill="none" viewBox="0 0 44 32"><rect x=".5" y=".5" width="43" height="31" stroke="#444" stroke-width=".7"/><line x1="5" y1="5" x2="5" y2="27" stroke="#666" stroke-width=".8"/><line x1="9" y1="3" x2="9" y2="29" stroke="#666" stroke-width="1.2"/><line x1="14" y1="5" x2="14" y2="27" stroke="#666" stroke-width=".8"/><line x1="18" y1="3" x2="18" y2="29" stroke="#666" stroke-width=".8"/><line x1="22" y1="5" x2="22" y2="27" stroke="#666" stroke-width="1.2"/><line x1="26" y1="3" x2="26" y2="29" stroke="#666" stroke-width=".8"/><line x1="30" y1="5" x2="30" y2="27" stroke="#666" stroke-width=".8"/><line x1="34" y1="3" x2="34" y2="29" stroke="#666" stroke-width="1.2"/><line x1="38" y1="5" x2="38" y2="27" stroke="#666" stroke-width=".8"/></svg>
-        <div class="scan-idle-txt">Appuyer pour scanner<br>EAN13 ou QR emplacement</div>
+        <div class="scan-idle-txt" id="sc-idle-txt">Appuyer pour scanner<br>EAN13 ou QR emplacement</div>
       </div>
       <div class="scan-ui" id="sc-ui" style="display:none">
         <div class="scan-reticle"><div class="sc sc-tl"></div><div class="sc sc-tr"></div><div class="sc sc-bl"></div><div class="sc sc-br"></div><div class="scan-line"></div></div>
       </div>
     </div>
   </div>
-  <div style="padding:10px 20px;border-bottom:var(--bdr-l);display:flex;gap:8px">
-    <button class="btn btn-black" id="sc-toggle" onclick="toggleScanner()" style="flex:1">
-      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="1"/></svg>Démarrer
+  <div style="padding:10px 20px;border-bottom:var(--bdr-l);display:flex;gap:8px" id="sc-btn-zone">
+    <!-- Bouton principal : adaptatif iOS/Android -->
+    <button class="btn btn-black" id="sc-toggle" onclick="startScanAdaptive()" style="flex:1">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="1"/></svg><span id="sc-btn-label">Scanner</span>
     </button>
     <button class="btn btn-gray" onclick="toggleManual()">
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>Saisir
@@ -1179,335 +1187,15 @@ body{background:var(--white);color:var(--black);font-family:var(--sans);font-wei
 <div class="toast" id="toast"></div>
 
 <script>
-// ══════════════════════════════════════════════════════════
-//  BARCODE SCANNER ENGINE v2
-//  Stratégie : ZXing CDN (robuste) + fallback pur JS amélioré
-//  Compatible Safari iOS 14+, Chrome Android
-// ══════════════════════════════════════════════════════════
-
-const BarcodeScanner = (function() {
-
-  let video = null;
-  let canvas = null;
-  let ctx = null;
-  let timer = null;
-  let callback = null;
-  let lastCode = null;
-  let lastTime = 0;
-  let zxingReader = null;
-  let useZXing = false;
-  const DEBOUNCE = 1200;
-
-  // ── Tentative de chargement ZXing depuis CDN ──
-  async function tryLoadZXing() {
-    return new Promise(resolve => {
-      if (typeof ZXing !== 'undefined') { resolve(true); return; }
-      const urls = [
-        'https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js',
-        'https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js',
-      ];
-      let tried = 0;
-      function tryNext() {
-        if (tried >= urls.length) { resolve(false); return; }
-        const s = document.createElement('script');
-        s.src = urls[tried++];
-        s.onload = () => resolve(true);
-        s.onerror = tryNext;
-        s.timeout = 3000;
-        document.head.appendChild(s);
-        setTimeout(() => { if (typeof ZXing === 'undefined') tryNext(); }, 3500);
-      }
-      tryNext();
-    });
-  }
-
-  // ── Init ──
-  async function init(videoEl, cb) {
-    video = videoEl;
-    callback = cb;
-    canvas = document.createElement('canvas');
-    canvas.style.display = 'none';
-    document.body.appendChild(canvas);
-    ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-    // Essayer ZXing
-    const loaded = await tryLoadZXing();
-    if (loaded && typeof ZXing !== 'undefined') {
-      try {
-        zxingReader = new ZXing.BrowserMultiFormatReader();
-        useZXing = true;
-        console.log('[Scanner] ZXing chargé ✓');
-      } catch(e) {
-        useZXing = false;
-        console.log('[Scanner] ZXing init failed, fallback pur JS');
-      }
-    } else {
-      useZXing = false;
-      console.log('[Scanner] ZXing indisponible, moteur JS pur');
-    }
-  }
-
-  function start() {
-    if (timer) stop();
-    if (useZXing && zxingReader) {
-      startZXing();
-    } else {
-      timer = setInterval(scanFrameJS, 100);
-    }
-  }
-
-  function stop() {
-    if (timer) { clearInterval(timer); timer = null; }
-    if (zxingReader) { try { zxingReader.reset(); } catch(e){} }
-    if (canvas && canvas.parentNode) { canvas.parentNode.removeChild(canvas); canvas = null; ctx = null; }
-    useZXing = false;
-    zxingReader = null;
-  }
-
-  // ── ZXing scan loop ──
-  function startZXing() {
-    timer = setInterval(async () => {
-      if (!video || video.readyState < 2 || video.paused) return;
-      if (!canvas) return;
-      const vw = video.videoWidth, vh = video.videoHeight;
-      if (!vw || !vh) return;
-      canvas.width = vw; canvas.height = vh;
-      ctx.drawImage(video, 0, 0, vw, vh);
-      try {
-        const imgData = canvas.toDataURL('image/png');
-        const result = await zxingReader.decodeFromImageUrl(imgData);
-        if (result) {
-          const code = result.getText();
-          emit(code);
-        }
-      } catch(e) { /* No barcode found */ }
-    }, 200);
-  }
-
-  // ── Scan pur JS amélioré ──
-  function scanFrameJS() {
-    if (!video || !ctx || video.readyState < 2) return;
-    const vw = video.videoWidth, vh = video.videoHeight;
-    if (!vw || !vh) return;
-    canvas.width = vw; canvas.height = vh;
-    ctx.drawImage(video, 0, 0, vw, vh);
-
-    // Scanner 15 lignes horizontales dans la zone centrale (30% à 70%)
-    const scanOffsets = [-0.20,-0.16,-0.12,-0.08,-0.04,0,0.04,0.08,0.12,0.16,0.20];
-    for (const off of scanOffsets) {
-      const y = Math.round(vh * (0.5 + off));
-      const result = decodeLine(y, vw);
-      if (result) { emit(result); return; }
-    }
-  }
-
-  function emit(code) {
-    const now = Date.now();
-    if (code === lastCode && now - lastTime < DEBOUNCE) return;
-    lastCode = code; lastTime = now;
-    if (callback) callback(code);
-  }
-
-  // ══════════════════════════════════════
-  //  DÉCODEUR EAN-13 PUR JS — VERSION 2
-  // ══════════════════════════════════════
-
-  // Tables EAN-13
-  const L_CODES = ['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
-  const G_CODES = ['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'];
-  const R_CODES = ['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'];
-
-  // Première parité selon le premier chiffre
-  const FIRST_DIGIT_PARITY = [
-    'LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG',
-    'LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'
-  ];
-
-  function decodeLine(y, width) {
-    const imgData = ctx.getImageData(0, y, width, 1);
-    const pixels = imgData.data;
-
-    // Convertir en binaire avec seuillage adaptatif local
-    const binary = toBinary(pixels, width);
-
-    // Essayer LTR et RTL
-    const ltr = tryDecodeEAN13(binary, width);
-    if (ltr) return ltr;
-
-    const rtl = tryDecodeEAN13(binary.slice().reverse(), width);
-    if (rtl) return rtl;
-
-    return null;
-  }
-
-  function toBinary(pixels, width) {
-    // Seuillage par blocs (adaptatif)
-    const blockSize = Math.max(20, Math.floor(width / 30));
-    const result = new Uint8Array(width);
-
-    for (let x = 0; x < width; x++) {
-      // Calculer la moyenne locale
-      const start = Math.max(0, x - blockSize);
-      const end = Math.min(width - 1, x + blockSize);
-      let sum = 0;
-      for (let i = start; i <= end; i++) {
-        const idx = i * 4;
-        sum += (pixels[idx] * 77 + pixels[idx+1] * 150 + pixels[idx+2] * 29) >> 8;
-      }
-      const localMean = sum / (end - start + 1);
-      const idx = x * 4;
-      const gray = (pixels[idx] * 77 + pixels[idx+1] * 150 + pixels[idx+2] * 29) >> 8;
-      result[x] = gray < localMean * 0.85 ? 1 : 0;
-    }
-    return result;
-  }
-
-  // Extraire les runs (séquences de même valeur)
-  function getRuns(binary) {
-    const runs = [];
-    if (!binary.length) return runs;
-    let val = binary[0], len = 1;
-    for (let i = 1; i < binary.length; i++) {
-      if (binary[i] === val) { len++; }
-      else { runs.push(len); val = binary[i]; len = 1; }
-    }
-    runs.push(len);
-    return runs; // runs[0] = white/light, alternating dark/light
-  }
-
-  function tryDecodeEAN13(binary, width) {
-    const runs = getRuns(binary);
-    if (runs.length < 59) return null; // EAN-13 needs at least 59 bars
-
-    // Trouver la garde gauche (101)
-    for (let startR = 0; startR < runs.length - 55; startR++) {
-      // Ignorer les quiet zones (longs runs blancs au début)
-      // La garde est: dark-light-dark (index startR = dark)
-      // Si startR est pair, on est sur dark; impair = light
-
-      // Trouver position où commence une barre sombre
-      // runs alterne: runs[0] peut être blanc ou noir
-      // On suppose binary[0]=0 (white), donc runs[0]=blanc, runs[1]=noir, etc.
-      // Guard = pattern 1-1-1 (3 modules)
-
-      const guardRuns = runs.slice(startR, startR + 3);
-      if (guardRuns.length < 3) break;
-      const unitGuard = (guardRuns[0] + guardRuns[1] + guardRuns[2]) / 3;
-      if (unitGuard < 1) continue;
-
-      // Vérifier que c'est bien une garde (tolerances généreuses)
-      const tol = 0.7;
-      if (Math.abs(guardRuns[0]/unitGuard - 1) > tol) continue;
-      if (Math.abs(guardRuns[1]/unitGuard - 1) > tol) continue;
-      if (Math.abs(guardRuns[2]/unitGuard - 1) > tol) continue;
-
-      // Décoder 6 chiffres gauche
-      let pos = startR + 3;
-      const leftDigits = [];
-      const leftParities = [];
-      let unitSum = unitGuard * 3;
-      let unitCount = 3;
-
-      for (let d = 0; d < 6; d++) {
-        if (pos + 3 >= runs.length) { leftDigits.push(-1); leftParities.push('?'); pos += 4; continue; }
-        const bars = runs.slice(pos, pos + 4);
-        const barsSum = bars.reduce((a,b)=>a+b, 0);
-        const unit = barsSum / 7; // EAN digit = 7 modules
-        unitSum += barsSum; unitCount += 7;
-
-        const bits = bars.map(b => Math.round(b / unit));
-        const bitStr = bits.join('');
-
-        // Chercher dans L et G
-        let found = false;
-        for (let dig = 0; dig < 10; dig++) {
-          // Convertir L_CODES en runs
-          const lRuns = codeToRuns(L_CODES[dig]);
-          const gRuns = codeToRuns(G_CODES[dig]);
-          if (runsMatch(bars, lRuns, unit)) { leftDigits.push(dig); leftParities.push('L'); found=true; break; }
-          if (runsMatch(bars, gRuns, unit)) { leftDigits.push(dig); leftParities.push('G'); found=true; break; }
-        }
-        if (!found) { leftDigits.push(-1); leftParities.push('?'); }
-        pos += 4;
-      }
-
-      if (leftDigits.includes(-1) || leftParities.includes('?')) continue;
-
-      // Garde centrale (01010 = 5 modules)
-      if (pos + 4 >= runs.length) continue;
-      pos += 5; // skip middle guard
-
-      // Décoder 6 chiffres droite
-      const rightDigits = [];
-      for (let d = 0; d < 6; d++) {
-        if (pos + 3 >= runs.length) { rightDigits.push(-1); pos += 4; continue; }
-        const bars = runs.slice(pos, pos + 4);
-        const unit = bars.reduce((a,b)=>a+b,0) / 7;
-        let found = false;
-        for (let dig = 0; dig < 10; dig++) {
-          const rRuns = codeToRuns(R_CODES[dig]);
-          if (runsMatch(bars, rRuns, unit)) { rightDigits.push(dig); found=true; break; }
-        }
-        if (!found) { rightDigits.push(-1); }
-        pos += 4;
-      }
-
-      if (rightDigits.includes(-1)) continue;
-
-      // Déterminer le 1er chiffre depuis la parité
-      const parStr = leftParities.join('');
-      const firstDigit = FIRST_DIGIT_PARITY.indexOf(parStr);
-      if (firstDigit === -1) continue;
-
-      const all = [firstDigit, ...leftDigits, ...rightDigits];
-
-      // Vérifier checksum
-      if (checksum(all)) return all.join('');
-    }
-    return null;
-  }
-
-  // Convertir un code binaire '0001101' en runs [3,3,1,1] (longueurs de barres)
-  function codeToRuns(code) {
-    const runs = [];
-    let len = 1;
-    for (let i = 1; i < code.length; i++) {
-      if (code[i] === code[i-1]) { len++; }
-      else { runs.push(len); len = 1; }
-    }
-    runs.push(len);
-    return runs;
-  }
-
-  // Comparer des runs réels avec les runs théoriques (tolérance proportionnelle)
-  function runsMatch(actual, theoretical, unit) {
-    if (actual.length !== theoretical.length) return false;
-    for (let i = 0; i < actual.length; i++) {
-      const expected = theoretical[i] * unit;
-      const tolerance = Math.max(unit * 0.5, 1);
-      if (Math.abs(actual[i] - expected) > tolerance) return false;
-    }
-    return true;
-  }
-
-  // EAN checksum
-  function checksum(digits) {
-    let s = 0;
-    for (let i = 0; i < 12; i++) s += digits[i] * (i % 2 === 0 ? 1 : 3);
-    return (10 - (s % 10)) % 10 === digits[12];
-  }
-
-  return { init, start, stop };
-
-})();
 
 
 
-// ══════════════════════════════════════
-//  MODE Stock v4 — Logic
-// ══════════════════════════════════════
+
+
+
+
 const DB_KEY='dior_v4';
-['dior_v1','dior_v2','dior_v3','stockpieces_v2','atelier_v3'].forEach(k=>{try{if(localStorage.getItem(k))localStorage.removeItem(k);}catch(e){}});
+['dior_v1','dior_v2','dior_v3','stockpieces_v2'].forEach(k=>{try{if(localStorage.getItem(k))localStorage.removeItem(k);}catch(e){}});
 
 function loadDB(){
   try{
@@ -1524,19 +1212,26 @@ function loadDB(){
   }catch(e){return seed();}
 }
 function saveDB(){try{localStorage.setItem(DB_KEY,JSON.stringify(db));}catch(e){console.error('save failed',e);}}
-function seed(){return JSON.parse('{"articles":{"3700089690011":{"ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","family":"Bandoulières","ref":"BND-CN-120","price":18.5,"threshold":15,"photo":"","locations":{"xaji0y6dpbhsahx":"1t2tala753lc58d","thv3a3zmf8mdd4v":"j2qp89uzfk8ut0c"}},"3700089690012":{"ean":"3700089690012","name":"Bandoulière chaîne dorée 110cm","family":"Bandoulières","ref":"BND-CD-110","price":24.0,"threshold":10,"photo":"","locations":{"xaji0y6dpbhsahx":"rc11ertj5pht0hl","thv3a3zmf8mdd4v":"vs4f8cgvyie6ivw","30t9nt3w5uzbikc":"0lvsnujza7tz0yn"}},"3700089690013":{"ean":"3700089690013","name":"Bandoulière tressée havane 100cm","family":"Bandoulières","ref":"BND-TH-100","price":21.0,"threshold":8,"photo":"","locations":{"xaji0y6dpbhsahx":"9xpseimvihcwi64","thv3a3zmf8mdd4v":"pvs7hzioykl1cq9","30t9nt3w5uzbikc":"cxll4zklookep7y"}},"4006381333901":{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","family":"Boutons","ref":"BTN-MD-18","price":1.2,"threshold":30,"photo":"","locations":{"xaji0y6dpbhsahx":"ciyhe7ur23gdppq","thv3a3zmf8mdd4v":"9chj755nf4zw9xa"}},"4006381333902":{"ean":"4006381333902","name":"Bouton nacre Ø12mm","family":"Boutons","ref":"BTN-NC-12","price":0.9,"threshold":50,"photo":"","locations":{"xaji0y6dpbhsahx":"0y9dom5igqpki7p","thv3a3zmf8mdd4v":"3kx7eedtjvzhwjr","30t9nt3w5uzbikc":"gdswm31yihair4c"}},"4006381333903":{"ean":"4006381333903","name":"Bouton corne Ø22mm","family":"Boutons","ref":"BTN-CO-22","price":2.4,"threshold":25,"photo":"","locations":{"xaji0y6dpbhsahx":"5tb94874frhocn9","thv3a3zmf8mdd4v":"64dpja1wj0tpac5","30t9nt3w5uzbikc":"owgzrixa11dpg8s"}},"4006381333904":{"ean":"4006381333904","name":"Bouton logo CD argenté Ø15mm","family":"Boutons","ref":"BTN-CD-15","price":3.8,"threshold":20,"photo":"","locations":{"xaji0y6dpbhsahx":"1t2tala753lc58d","thv3a3zmf8mdd4v":"6t4ufel6246hid2"}},"5706998051001":{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","family":"Zips","ref":"ZIP-YKK-20N","price":1.6,"threshold":20,"photo":"","locations":{"xaji0y6dpbhsahx":"rc11ertj5pht0hl","thv3a3zmf8mdd4v":"5owf75935a0l725","30t9nt3w5uzbikc":"60rjiw1swjckjlt"}},"5706998051002":{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","family":"Zips","ref":"ZIP-YKK-30C","price":1.9,"threshold":15,"photo":"","locations":{"xaji0y6dpbhsahx":"9xpseimvihcwi64","thv3a3zmf8mdd4v":"3j2d54i3qk2iagl","30t9nt3w5uzbikc":"eiyzcotohp6vz41"}},"5706998051003":{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","family":"Zips","ref":"ZIP-INV-40B","price":2.1,"threshold":12,"photo":"","locations":{"xaji0y6dpbhsahx":"ciyhe7ur23gdppq","thv3a3zmf8mdd4v":"j2qp89uzfk8ut0c"}},"5706998051004":{"ean":"5706998051004","name":"Zip métal laiton 25cm","family":"Zips","ref":"ZIP-ML-25","price":3.4,"threshold":10,"photo":"","locations":{"xaji0y6dpbhsahx":"0y9dom5igqpki7p","thv3a3zmf8mdd4v":"vs4f8cgvyie6ivw","30t9nt3w5uzbikc":"0lvsnujza7tz0yn"}},"8712100450001":{"ean":"8712100450001","name":"Fermoir clip laiton 25mm","family":"Fermoirs","ref":"FRM-CL-25","price":4.2,"threshold":10,"photo":"","locations":{"xaji0y6dpbhsahx":"5tb94874frhocn9","thv3a3zmf8mdd4v":"pvs7hzioykl1cq9","30t9nt3w5uzbikc":"cxll4zklookep7y"}},"8712100450002":{"ean":"8712100450002","name":"Fermoir tournette argent 18mm","family":"Fermoirs","ref":"FRM-TO-18","price":5.6,"threshold":8,"photo":"","locations":{"xaji0y6dpbhsahx":"1t2tala753lc58d","thv3a3zmf8mdd4v":"9chj755nf4zw9xa"}},"8712100450003":{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","family":"Fermoirs","ref":"FRM-MP-20","price":3.1,"threshold":12,"photo":"","locations":{"xaji0y6dpbhsahx":"rc11ertj5pht0hl","thv3a3zmf8mdd4v":"3kx7eedtjvzhwjr","30t9nt3w5uzbikc":"gdswm31yihair4c"}},"8712100450004":{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","family":"Fermoirs","ref":"FRM-BR-35","price":2.8,"threshold":15,"photo":"","locations":{"xaji0y6dpbhsahx":"9xpseimvihcwi64","30t9nt3w5uzbikc":"owgzrixa11dpg8s"}},"3760170192801":{"ean":"3760170192801","name":"Anneau D métal doré 20mm","family":"Accessoires","ref":"ANN-DM-20","price":0.85,"threshold":40,"photo":"","locations":{"xaji0y6dpbhsahx":"ciyhe7ur23gdppq"}},"3760170192802":{"ean":"3760170192802","name":"Œillet pression Ø10mm – Or","family":"Accessoires","ref":"OEL-PR-10","price":0.6,"threshold":50,"photo":"","locations":{"xaji0y6dpbhsahx":"0y9dom5igqpki7p","30t9nt3w5uzbikc":"60rjiw1swjckjlt"}}},"stocks":{"xaji0y6dpbhsahx":{"3700089690011":68,"3700089690012":20,"3700089690013":3,"4006381333901":88,"4006381333902":82,"4006381333903":75,"4006381333904":0,"5706998051001":105,"5706998051002":79,"5706998051003":23,"5706998051004":95,"8712100450001":102,"8712100450002":79,"8712100450003":26,"8712100450004":61,"3760170192801":78,"3760170192802":61},"thv3a3zmf8mdd4v":{"3700089690011":76,"3700089690012":60,"3700089690013":64,"4006381333901":43,"4006381333902":43,"4006381333903":77,"4006381333904":58,"5706998051001":66,"5706998051002":31,"5706998051003":65,"5706998051004":2,"8712100450001":69,"8712100450002":38,"8712100450003":48,"8712100450004":0,"3760170192801":0,"3760170192802":0},"30t9nt3w5uzbikc":{"3700089690011":0,"3700089690012":24,"3700089690013":31,"4006381333901":0,"4006381333902":22,"4006381333903":6,"4006381333904":0,"5706998051001":15,"5706998051002":39,"5706998051003":0,"5706998051004":10,"8712100450001":13,"8712100450002":0,"8712100450003":29,"8712100450004":18,"3760170192801":0,"3760170192802":26}},"history":[{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"in","qty":4,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-05-09T17:13:29","loc":"R1-A3-E3-C1"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"in","qty":18,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-05-09T14:17:48","loc":"R1-A2-E2-C1"},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"in","qty":4,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-05-09T11:53:01","loc":"R2-A2-E1-C1"},{"ean":"3700089690013","name":"Bandoulière tressée havane 100cm","type":"out","qty":4,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-05-09T08:22:14","loc":"R1-A1-E3-C1"},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"out","qty":7,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-05-08T18:38:51","loc":""},{"ean":"3700089690013","name":"Bandoulière tressée havane 100cm","type":"in","qty":10,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-05-08T14:45:12","loc":"R1-A1-E3-C1"},{"ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","type":"in","qty":13,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-05-08T10:19:06","loc":"R1-A1-E1-C1"},{"ean":"3760170192802","name":"Œillet pression Ø10mm – Or","type":"in","qty":14,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-05-07T18:23:04","loc":"R1-A3-E2-C1"},{"ean":"8712100450001","name":"Fermoir clip laiton 25mm","type":"in","qty":14,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-05-07T15:06:27","loc":"R1-A1-E3-C1"},{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"out","qty":2,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-05-07T14:52:46","loc":"R1-A3-E3-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"in","qty":13,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-05-07T12:56:28","loc":"R1-A3-E2-C1"},{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"out","qty":8,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Administrateur","date":"2026-05-07T10:46:33","loc":"R1-A3-E3-C1"},{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"in","qty":7,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-05-06T13:17:56","loc":"R1-A3-E3-C1"},{"ean":"5706998051004","name":"Zip métal laiton 25cm","type":"in","qty":9,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Pierre Blanc","date":"2026-05-06T13:01:31","loc":"R2-A2-E1-C1"},{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","type":"out","qty":7,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-05-05T18:45:31","loc":"R1-A3-E1-C1"},{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","type":"in","qty":4,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-05-05T16:21:22","loc":""},{"ean":"8712100450001","name":"Fermoir clip laiton 25mm","type":"in","qty":14,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-05-05T11:19:42","loc":"R1-A1-E3-C1"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"out","qty":8,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-05-05T09:15:46","loc":"R1-A2-E2-C1"},{"ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","type":"transfer","qty":10,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-05-04T18:00:00","note":"→ Atelier Lyon – Sellerie"},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"transfer_in","qty":10,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-05-04T18:00:00","note":"← Atelier Paris – Maroquinerie"},{"ean":"4006381333903","name":"Bouton corne Ø22mm","type":"out","qty":5,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-05-04T11:20:07","loc":"R2-A3-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":6,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-05-02T17:48:33","loc":"R2-A1-E1-C1"},{"ean":"3760170192801","name":"Anneau D métal doré 20mm","type":"in","qty":16,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-05-02T12:44:08","loc":"R2-A1-E1-C1"},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"in","qty":18,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-05-02T10:19:00","loc":"R1-A2-E2-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"out","qty":8,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-05-01T17:38:50","loc":"R1-A3-E2-C1"},{"ean":"4006381333903","name":"Bouton corne Ø22mm","type":"in","qty":16,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Julie Laurent","date":"2026-05-01T15:28:21","loc":"R2-A3-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":14,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-05-01T10:09:51","loc":"R2-A1-E1-C1"},{"ean":"8712100450002","name":"Fermoir tournette argent 18mm","type":"in","qty":2,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-05-01T09:52:04","loc":"R1-A2-E1-C1"},{"ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","type":"in","qty":16,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Pierre Blanc","date":"2026-04-30T16:04:10","loc":"R1-A1-E1-C1"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"in","qty":20,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-04-30T12:55:37","loc":"R1-A2-E2-C1"},{"ean":"4006381333904","name":"Bouton logo CD argenté Ø15mm","type":"in","qty":6,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-04-30T09:48:13","loc":"R1-A3-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":15,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-04-29T12:02:14","loc":""},{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"in","qty":7,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Administrateur","date":"2026-04-29T09:43:14","loc":"R1-A3-E3-C1"},{"ean":"3700089690013","name":"Bandoulière tressée havane 100cm","type":"in","qty":1,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Administrateur","date":"2026-04-28T17:16:01","loc":"R1-A3-E1-C1"},{"ean":"3700089690013","name":"Bandoulière tressée havane 100cm","type":"out","qty":6,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-28T16:31:28","loc":"R1-A1-E3-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"out","qty":3,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-04-28T14:07:34","loc":"R1-A3-E2-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":17,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-04-28T09:29:44","loc":""},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":15,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Administrateur","date":"2026-04-28T09:03:10","loc":""},{"ean":"3700089690012","name":"Bandoulière chaîne dorée 110cm","type":"in","qty":15,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Pierre Blanc","date":"2026-04-27T18:52:17","loc":"R1-A2-E1-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"transfer","qty":5,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-04-27T18:00:00","note":"→ Atelier Nice – Couture"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"in","qty":16,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-04-27T12:11:37","loc":"R1-A2-E2-C1"},{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","type":"in","qty":12,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-04-25T16:52:00","loc":""},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":9,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-04-25T14:44:31","loc":""},{"ean":"5706998051004","name":"Zip métal laiton 25cm","type":"out","qty":6,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-25T13:26:21","loc":"R1-A1-E2-C1"},{"ean":"5706998051004","name":"Zip métal laiton 25cm","type":"in","qty":13,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-25T08:29:05","loc":"R1-A1-E2-C1"},{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","type":"in","qty":5,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-04-24T17:48:31","loc":"R1-A3-E1-C1"},{"ean":"3760170192801","name":"Anneau D métal doré 20mm","type":"in","qty":20,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-04-24T12:28:56","loc":"R2-A1-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":3,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-24T11:45:10","loc":""},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":8,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-04-23T15:59:45","loc":""},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"in","qty":5,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-04-23T11:53:58","loc":"R1-A2-E1-C1"},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"in","qty":11,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-04-22T18:31:55","loc":"R1-A2-E2-C1"},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"in","qty":17,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-04-22T15:15:29","loc":"R1-A2-E2-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":10,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-04-22T12:52:00","loc":""},{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"in","qty":17,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-22T10:55:04","loc":"R1-A3-E3-C1"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"out","qty":7,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Julie Laurent","date":"2026-04-21T17:24:14","loc":"R1-A2-E1-C1"},{"ean":"8712100450002","name":"Fermoir tournette argent 18mm","type":"out","qty":4,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-21T16:48:34","loc":"R1-A2-E1-C1"},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"in","qty":19,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-04-21T14:42:50","loc":"R1-A2-E2-C1"},{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","type":"in","qty":1,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Administrateur","date":"2026-04-20T13:55:06","loc":"R1-A3-E1-C1"},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"in","qty":1,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-04-18T18:45:55","loc":"R1-A2-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":2,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-04-18T18:43:58","loc":"R2-A1-E1-C1"},{"ean":"3760170192801","name":"Anneau D métal doré 20mm","type":"in","qty":8,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-18T14:20:40","loc":""},{"ean":"8712100450002","name":"Fermoir tournette argent 18mm","type":"out","qty":9,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-18T13:39:44","loc":""},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"out","qty":5,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Pierre Blanc","date":"2026-04-18T10:26:55","loc":"R2-A2-E1-C1"},{"ean":"3760170192801","name":"Anneau D métal doré 20mm","type":"in","qty":9,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-04-17T17:43:15","loc":""},{"ean":"4006381333903","name":"Bouton corne Ø22mm","type":"in","qty":13,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-04-17T11:33:26","loc":"R2-A3-E1-C1"},{"ean":"3700089690012","name":"Bandoulière chaîne dorée 110cm","type":"out","qty":3,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-17T08:20:50","loc":"R1-A1-E2-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":10,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Pierre Blanc","date":"2026-04-16T17:18:44","loc":"R2-A1-E1-C1"},{"ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","type":"in","qty":6,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-16T15:16:42","loc":"R1-A1-E1-C1"},{"ean":"3760170192801","name":"Anneau D métal doré 20mm","type":"out","qty":6,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-04-16T12:12:24","loc":"R2-A1-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":15,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-04-16T09:28:22","loc":""},{"ean":"3700089690012","name":"Bandoulière chaîne dorée 110cm","type":"out","qty":5,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-04-15T18:49:47","loc":"R1-A1-E2-C1"},{"ean":"8712100450001","name":"Fermoir clip laiton 25mm","type":"in","qty":5,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-04-15T11:38:51","loc":"R2-A3-E1-C1"},{"ean":"3700089690012","name":"Bandoulière chaîne dorée 110cm","type":"in","qty":12,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Pierre Blanc","date":"2026-04-14T18:06:57","loc":"R1-A1-E2-C1"},{"ean":"3760170192802","name":"Œillet pression Ø10mm – Or","type":"out","qty":5,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-04-14T16:56:23","loc":"R1-A3-E2-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":5,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Pierre Blanc","date":"2026-04-14T10:05:58","loc":"R1-A1-E1-C1"},{"ean":"5706998051004","name":"Zip métal laiton 25cm","type":"in","qty":5,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Pierre Blanc","date":"2026-04-13T15:51:18","loc":"R2-A2-E1-C1"},{"ean":"8712100450001","name":"Fermoir clip laiton 25mm","type":"in","qty":20,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-04-11T17:24:52","loc":"R2-A3-E1-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"in","qty":15,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-11T16:20:58","loc":"R1-A3-E2-C1"},{"ean":"8712100450002","name":"Fermoir tournette argent 18mm","type":"in","qty":13,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-04-11T11:55:43","loc":""},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"in","qty":9,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-11T08:16:34","loc":"R1-A2-E1-C1"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"out","qty":2,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-04-10T18:47:44","loc":"R1-A2-E2-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"out","qty":6,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-04-10T15:07:06","loc":"R1-A3-E2-C1"},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"in","qty":10,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-04-10T12:41:26","loc":"R2-A1-E1-C1"}],"transfers":[{"id":"4w7kyhqin9n6xcj","ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","qty":8,"fromDepotId":"xaji0y6dpbhsahx","fromDepotName":"Atelier Paris – Maroquinerie","toDepotId":"thv3a3zmf8mdd4v","toDepotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-05-07T18:00:00","status":"pending"},{"id":"883dhx8bm92h3tv","ean":"4006381333901","name":"Bouton métal doré Ø18mm","qty":25,"fromDepotId":"xaji0y6dpbhsahx","fromDepotName":"Atelier Paris – Maroquinerie","toDepotId":"30t9nt3w5uzbikc","toDepotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-05-01T18:00:00","status":"done","receivedBy":"Pierre Blanc","receivedDate":"2026-05-02T18:00:00"},{"id":"3i12vj99t2d5em2","ean":"8712100450001","name":"Fermoir clip laiton 25mm","qty":15,"fromDepotId":"thv3a3zmf8mdd4v","fromDepotName":"Atelier Lyon – Sellerie","toDepotId":"30t9nt3w5uzbikc","toDepotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-05-04T18:00:00","status":"done","receivedBy":"Pierre Blanc","receivedDate":"2026-05-05T18:00:00"}],"users":{"idkwnnhj7xvg0fn":{"id":"idkwnnhj7xvg0fn","name":"Administrateur","role":"admin","pin":"1234","depotId":"xaji0y6dpbhsahx"},"9xuy41ibljh75lx":{"id":"9xuy41ibljh75lx","name":"Sophie Martin","role":"manager","pin":"2345","depotId":"xaji0y6dpbhsahx"},"o6qjiujv6oh9sdb":{"id":"o6qjiujv6oh9sdb","name":"Marc Dubois","role":"manager","pin":"3456","depotId":"thv3a3zmf8mdd4v"},"dw2pcn9t84azytj":{"id":"dw2pcn9t84azytj","name":"Julie Laurent","role":"operator","pin":"4567","depotId":"xaji0y6dpbhsahx"},"xepq85jsg65kxvf":{"id":"xepq85jsg65kxvf","name":"Pierre Blanc","role":"operator","pin":"5678","depotId":"30t9nt3w5uzbikc"}},"depots":{"xaji0y6dpbhsahx":{"id":"xaji0y6dpbhsahx","name":"Atelier Paris – Maroquinerie","location":"Paris, 8e","code":"DEP-01"},"thv3a3zmf8mdd4v":{"id":"thv3a3zmf8mdd4v","name":"Atelier Lyon – Sellerie","location":"Lyon, 6e","code":"DEP-02"},"30t9nt3w5uzbikc":{"id":"30t9nt3w5uzbikc","name":"Atelier Nice – Couture","location":"Nice, Vieux","code":"DEP-03"}},"locations":{"1t2tala753lc58d":{"id":"1t2tala753lc58d","rack":"R1","allee":"A1","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Bandoulières courtes"},"rc11ertj5pht0hl":{"id":"rc11ertj5pht0hl","rack":"R1","allee":"A2","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Bandoulières longues"},"9xpseimvihcwi64":{"id":"9xpseimvihcwi64","rack":"R1","allee":"A3","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Boutons métal"},"ciyhe7ur23gdppq":{"id":"ciyhe7ur23gdppq","rack":"R2","allee":"A1","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Boutons nacre/corne"},"0y9dom5igqpki7p":{"id":"0y9dom5igqpki7p","rack":"R2","allee":"A2","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Zips noirs"},"5tb94874frhocn9":{"id":"5tb94874frhocn9","rack":"R2","allee":"A3","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Zips colorés"},"j2qp89uzfk8ut0c":{"id":"j2qp89uzfk8ut0c","rack":"R1","allee":"A1","etagere":"E1","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Bandoulières"},"vs4f8cgvyie6ivw":{"id":"vs4f8cgvyie6ivw","rack":"R1","allee":"A1","etagere":"E2","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Boutons"},"pvs7hzioykl1cq9":{"id":"pvs7hzioykl1cq9","rack":"R1","allee":"A1","etagere":"E3","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Zips"},"9chj755nf4zw9xa":{"id":"9chj755nf4zw9xa","rack":"R1","allee":"A2","etagere":"E1","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Fermoirs"},"3kx7eedtjvzhwjr":{"id":"3kx7eedtjvzhwjr","rack":"R1","allee":"A2","etagere":"E2","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Accessoires"},"64dpja1wj0tpac5":{"id":"64dpja1wj0tpac5","rack":"R1","allee":"A2","etagere":"E3","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Stock réserve"},"6t4ufel6246hid2":{"id":"6t4ufel6246hid2","rack":"R1","allee":"A3","etagere":"E1","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Entrées récentes"},"5owf75935a0l725":{"id":"5owf75935a0l725","rack":"R1","allee":"A3","etagere":"E2","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Sorties préparées"},"3j2d54i3qk2iagl":{"id":"3j2d54i3qk2iagl","rack":"R1","allee":"A3","etagere":"E3","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Zone contrôle"},"58kxo9t7e8g8jdp":{"id":"58kxo9t7e8g8jdp","rack":"R1","allee":"A1","etagere":"E1","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Saisonniers"},"0lvsnujza7tz0yn":{"id":"0lvsnujza7tz0yn","rack":"R1","allee":"A1","etagere":"E2","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Collection"},"cxll4zklookep7y":{"id":"cxll4zklookep7y","rack":"R1","allee":"A1","etagere":"E3","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Accessoires fins"},"6wktakpuxqphr62":{"id":"6wktakpuxqphr62","rack":"R1","allee":"A2","etagere":"E1","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Zips spéciaux"},"gdswm31yihair4c":{"id":"gdswm31yihair4c","rack":"R1","allee":"A2","etagere":"E2","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Fermoirs prestige"},"owgzrixa11dpg8s":{"id":"owgzrixa11dpg8s","rack":"R1","allee":"A2","etagere":"E3","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Boutons luxe"},"bi4q2y9v86wzs3t":{"id":"bi4q2y9v86wzs3t","rack":"R1","allee":"A3","etagere":"E1","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Stock exposition"},"60rjiw1swjckjlt":{"id":"60rjiw1swjckjlt","rack":"R1","allee":"A3","etagere":"E2","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Retours"},"eiyzcotohp6vz41":{"id":"eiyzcotohp6vz41","rack":"R1","allee":"A3","etagere":"E3","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Zone inventaire"},"ohgi1jnyt7rpwh6":{"id":"ohgi1jnyt7rpwh6","rack":"R2","allee":"A1","etagere":"E2","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Bandoulières premium"},"nnyfx4m8t1qojah":{"id":"nnyfx4m8t1qojah","rack":"R2","allee":"A2","etagere":"E2","case":"C2","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Boutons spéciaux"},"9tq6v9mh7f2v97x":{"id":"9tq6v9mh7f2v97x","rack":"R2","allee":"A3","etagere":"E2","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Zips longs"},"bar3cpdlalsh2bh":{"id":"bar3cpdlalsh2bh","rack":"R2","allee":"A1","etagere":"E2","case":"C2","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Fermoirs complexes"},"jo1mz7e5v0vodfg":{"id":"jo1mz7e5v0vodfg","rack":"R2","allee":"A2","etagere":"E2","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Accessoires divers"},"gfhu124e3gckvbh":{"id":"gfhu124e3gckvbh","rack":"R2","allee":"A3","etagere":"E2","case":"C2","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Stock sécurité"}},"audit":[{"id":"x9dvnu80b6ugvs8","type":"login","action":"Connexion de Administrateur","operator":"Administrateur","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T00:00:00","meta":{"depotName":"Atelier Paris – Maroquinerie","role":"admin"}},{"id":"9l8lpqw2vmcqbnk","type":"admin","action":"Import catalogue : 17 article(s)","operator":"Pierre Blanc","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T03:00:00","meta":{"count":17}},{"id":"fdjgf1c8wquuy5x","type":"transfer","action":"Réception 25 × Bouton métal doré depuis Paris","operator":"Julie Laurent","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T06:00:00","meta":{"ean":"4006381333901","qty":25}},{"id":"poc50h2cwtg1m8x","type":"in","action":"Entrée +50 × Bouton nacre Ø12mm","operator":"Marc Dubois","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T09:00:00","meta":{"ean":"4006381333902","qty":50,"depotId":"30t9nt3w5uzbikc"}},{"id":"clpoxko8g8qynpd","type":"login","action":"Connexion de Pierre Blanc","operator":"Sophie Martin","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T12:00:00","meta":{"depotName":"Atelier Nice – Couture","role":"operator"}},{"id":"1kerpetiuymo0pq","type":"out","action":"Sortie −8 × Fermoir tournette argent 18mm","operator":"Administrateur","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T15:00:00","meta":{"ean":"8712100450002","qty":8,"depotId":"xaji0y6dpbhsahx"}},{"id":"ohsmdyvslh9bh81","type":"login","action":"Connexion de Julie Laurent","operator":"Pierre Blanc","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T18:00:00","meta":{"depotName":"Atelier Paris – Maroquinerie","role":"operator"}},{"id":"nqfll7v5f1bcppv","type":"admin","action":"Article créé : Boucle réglable laiton 35mm","operator":"Julie Laurent","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T21:00:00","meta":{"ean":"8712100450004"}},{"id":"xybj17mgfxc08dt","type":"inv","action":"Inventaire guidé validé — 3 correction(s)","operator":"Marc Dubois","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T00:00:00","meta":{"depotId":"xaji0y6dpbhsahx","corrections":3}},{"id":"fr4muekipu1wyuv","type":"in","action":"Entrée +20 × Fermoir clip laiton 25mm","operator":"Sophie Martin","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T03:00:00","meta":{"ean":"8712100450001","qty":20,"depotId":"thv3a3zmf8mdd4v"}},{"id":"ec8uyo57p6bklds","type":"login","action":"Connexion de Marc Dubois","operator":"Administrateur","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T06:00:00","meta":{"depotName":"Atelier Lyon – Sellerie","role":"manager"}},{"id":"o3o0llj8yrddp0n","type":"transfer","action":"Transfert 8 × Bandoulière cuir naturel 120cm → Lyon","operator":"Pierre Blanc","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T09:00:00","meta":{"ean":"3700089690011","qty":8,"fromDepot":"Paris","toDepot":"Lyon"}},{"id":"vznvksp2ex5t5p5","type":"out","action":"Sortie −12 × Zip YKK 20cm – Noir","operator":"Julie Laurent","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T12:00:00","meta":{"ean":"5706998051001","qty":12,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie"}},{"id":"xkxb94pdzp6lfew","type":"in","action":"Entrée +30 × Bouton métal doré Ø18mm","operator":"Marc Dubois","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T15:00:00","meta":{"ean":"4006381333901","qty":30,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie"}},{"id":"vajepecqnvqhw06","type":"login","action":"Connexion de Sophie Martin","operator":"Sophie Martin","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T18:00:00","meta":{"depotName":"Atelier Paris – Maroquinerie","role":"manager"}}]}');}
 
+function seed(){
+  const demo=JSON.parse('{"articles":{"3700089690011":{"ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","family":"Bandoulières","ref":"BND-CN-120","price":18.5,"threshold":15,"photo":"","locations":{"xaji0y6dpbhsahx":"1t2tala753lc58d","thv3a3zmf8mdd4v":"j2qp89uzfk8ut0c"}},"3700089690012":{"ean":"3700089690012","name":"Bandoulière chaîne dorée 110cm","family":"Bandoulières","ref":"BND-CD-110","price":24.0,"threshold":10,"photo":"","locations":{"xaji0y6dpbhsahx":"rc11ertj5pht0hl","thv3a3zmf8mdd4v":"vs4f8cgvyie6ivw","30t9nt3w5uzbikc":"0lvsnujza7tz0yn"}},"3700089690013":{"ean":"3700089690013","name":"Bandoulière tressée havane 100cm","family":"Bandoulières","ref":"BND-TH-100","price":21.0,"threshold":8,"photo":"","locations":{"xaji0y6dpbhsahx":"9xpseimvihcwi64","thv3a3zmf8mdd4v":"pvs7hzioykl1cq9","30t9nt3w5uzbikc":"cxll4zklookep7y"}},"4006381333901":{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","family":"Boutons","ref":"BTN-MD-18","price":1.2,"threshold":30,"photo":"","locations":{"xaji0y6dpbhsahx":"ciyhe7ur23gdppq","thv3a3zmf8mdd4v":"9chj755nf4zw9xa"}},"4006381333902":{"ean":"4006381333902","name":"Bouton nacre Ø12mm","family":"Boutons","ref":"BTN-NC-12","price":0.9,"threshold":50,"photo":"","locations":{"xaji0y6dpbhsahx":"0y9dom5igqpki7p","thv3a3zmf8mdd4v":"3kx7eedtjvzhwjr","30t9nt3w5uzbikc":"gdswm31yihair4c"}},"4006381333903":{"ean":"4006381333903","name":"Bouton corne Ø22mm","family":"Boutons","ref":"BTN-CO-22","price":2.4,"threshold":25,"photo":"","locations":{"xaji0y6dpbhsahx":"5tb94874frhocn9","thv3a3zmf8mdd4v":"64dpja1wj0tpac5","30t9nt3w5uzbikc":"owgzrixa11dpg8s"}},"4006381333904":{"ean":"4006381333904","name":"Bouton logo CD argenté Ø15mm","family":"Boutons","ref":"BTN-CD-15","price":3.8,"threshold":20,"photo":"","locations":{"xaji0y6dpbhsahx":"1t2tala753lc58d","thv3a3zmf8mdd4v":"6t4ufel6246hid2"}},"5706998051001":{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","family":"Zips","ref":"ZIP-YKK-20N","price":1.6,"threshold":20,"photo":"","locations":{"xaji0y6dpbhsahx":"rc11ertj5pht0hl","thv3a3zmf8mdd4v":"5owf75935a0l725","30t9nt3w5uzbikc":"60rjiw1swjckjlt"}},"5706998051002":{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","family":"Zips","ref":"ZIP-YKK-30C","price":1.9,"threshold":15,"photo":"","locations":{"xaji0y6dpbhsahx":"9xpseimvihcwi64","thv3a3zmf8mdd4v":"3j2d54i3qk2iagl","30t9nt3w5uzbikc":"eiyzcotohp6vz41"}},"5706998051003":{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","family":"Zips","ref":"ZIP-INV-40B","price":2.1,"threshold":12,"photo":"","locations":{"xaji0y6dpbhsahx":"ciyhe7ur23gdppq","thv3a3zmf8mdd4v":"j2qp89uzfk8ut0c"}},"5706998051004":{"ean":"5706998051004","name":"Zip métal laiton 25cm","family":"Zips","ref":"ZIP-ML-25","price":3.4,"threshold":10,"photo":"","locations":{"xaji0y6dpbhsahx":"0y9dom5igqpki7p","thv3a3zmf8mdd4v":"vs4f8cgvyie6ivw","30t9nt3w5uzbikc":"0lvsnujza7tz0yn"}},"8712100450001":{"ean":"8712100450001","name":"Fermoir clip laiton 25mm","family":"Fermoirs","ref":"FRM-CL-25","price":4.2,"threshold":10,"photo":"","locations":{"xaji0y6dpbhsahx":"5tb94874frhocn9","thv3a3zmf8mdd4v":"pvs7hzioykl1cq9","30t9nt3w5uzbikc":"cxll4zklookep7y"}},"8712100450002":{"ean":"8712100450002","name":"Fermoir tournette argent 18mm","family":"Fermoirs","ref":"FRM-TO-18","price":5.6,"threshold":8,"photo":"","locations":{"xaji0y6dpbhsahx":"1t2tala753lc58d","thv3a3zmf8mdd4v":"9chj755nf4zw9xa"}},"8712100450003":{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","family":"Fermoirs","ref":"FRM-MP-20","price":3.1,"threshold":12,"photo":"","locations":{"xaji0y6dpbhsahx":"rc11ertj5pht0hl","thv3a3zmf8mdd4v":"3kx7eedtjvzhwjr","30t9nt3w5uzbikc":"gdswm31yihair4c"}},"8712100450004":{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","family":"Fermoirs","ref":"FRM-BR-35","price":2.8,"threshold":15,"photo":"","locations":{"xaji0y6dpbhsahx":"9xpseimvihcwi64","30t9nt3w5uzbikc":"owgzrixa11dpg8s"}},"3760170192801":{"ean":"3760170192801","name":"Anneau D métal doré 20mm","family":"Accessoires","ref":"ANN-DM-20","price":0.85,"threshold":40,"photo":"","locations":{"xaji0y6dpbhsahx":"ciyhe7ur23gdppq"}},"3760170192802":{"ean":"3760170192802","name":"Œillet pression Ø10mm – Or","family":"Accessoires","ref":"OEL-PR-10","price":0.6,"threshold":50,"photo":"","locations":{"xaji0y6dpbhsahx":"0y9dom5igqpki7p","30t9nt3w5uzbikc":"60rjiw1swjckjlt"}}},"stocks":{"xaji0y6dpbhsahx":{"3700089690011":68,"3700089690012":20,"3700089690013":3,"4006381333901":88,"4006381333902":82,"4006381333903":75,"4006381333904":0,"5706998051001":105,"5706998051002":79,"5706998051003":23,"5706998051004":95,"8712100450001":102,"8712100450002":79,"8712100450003":26,"8712100450004":61,"3760170192801":78,"3760170192802":61},"thv3a3zmf8mdd4v":{"3700089690011":76,"3700089690012":60,"3700089690013":64,"4006381333901":43,"4006381333902":43,"4006381333903":77,"4006381333904":58,"5706998051001":66,"5706998051002":31,"5706998051003":65,"5706998051004":2,"8712100450001":69,"8712100450002":38,"8712100450003":48,"8712100450004":0,"3760170192801":0,"3760170192802":0},"30t9nt3w5uzbikc":{"3700089690011":0,"3700089690012":24,"3700089690013":31,"4006381333901":0,"4006381333902":22,"4006381333903":6,"4006381333904":0,"5706998051001":15,"5706998051002":39,"5706998051003":0,"5706998051004":10,"8712100450001":13,"8712100450002":0,"8712100450003":29,"8712100450004":18,"3760170192801":0,"3760170192802":26}},"history":[{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"in","qty":4,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-05-09T17:13:29","loc":"R1-A3-E3-C1"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"in","qty":18,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-05-09T14:17:48","loc":"R1-A2-E2-C1"},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"in","qty":4,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-05-09T11:53:01","loc":"R2-A2-E1-C1"},{"ean":"3700089690013","name":"Bandoulière tressée havane 100cm","type":"out","qty":4,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-05-09T08:22:14","loc":"R1-A1-E3-C1"},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"out","qty":7,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-05-08T18:38:51","loc":""},{"ean":"3700089690013","name":"Bandoulière tressée havane 100cm","type":"in","qty":10,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-05-08T14:45:12","loc":"R1-A1-E3-C1"},{"ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","type":"in","qty":13,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-05-08T10:19:06","loc":"R1-A1-E1-C1"},{"ean":"3760170192802","name":"Œillet pression Ø10mm – Or","type":"in","qty":14,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-05-07T18:23:04","loc":"R1-A3-E2-C1"},{"ean":"8712100450001","name":"Fermoir clip laiton 25mm","type":"in","qty":14,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-05-07T15:06:27","loc":"R1-A1-E3-C1"},{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"out","qty":2,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-05-07T14:52:46","loc":"R1-A3-E3-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"in","qty":13,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-05-07T12:56:28","loc":"R1-A3-E2-C1"},{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"out","qty":8,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Administrateur","date":"2026-05-07T10:46:33","loc":"R1-A3-E3-C1"},{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"in","qty":7,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-05-06T13:17:56","loc":"R1-A3-E3-C1"},{"ean":"5706998051004","name":"Zip métal laiton 25cm","type":"in","qty":9,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Pierre Blanc","date":"2026-05-06T13:01:31","loc":"R2-A2-E1-C1"},{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","type":"out","qty":7,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-05-05T18:45:31","loc":"R1-A3-E1-C1"},{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","type":"in","qty":4,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-05-05T16:21:22","loc":""},{"ean":"8712100450001","name":"Fermoir clip laiton 25mm","type":"in","qty":14,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-05-05T11:19:42","loc":"R1-A1-E3-C1"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"out","qty":8,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-05-05T09:15:46","loc":"R1-A2-E2-C1"},{"ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","type":"transfer","qty":10,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-05-04T18:00:00","note":"→ Atelier Lyon – Sellerie"},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"transfer_in","qty":10,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-05-04T18:00:00","note":"← Atelier Paris – Maroquinerie"},{"ean":"4006381333903","name":"Bouton corne Ø22mm","type":"out","qty":5,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-05-04T11:20:07","loc":"R2-A3-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":6,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-05-02T17:48:33","loc":"R2-A1-E1-C1"},{"ean":"3760170192801","name":"Anneau D métal doré 20mm","type":"in","qty":16,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-05-02T12:44:08","loc":"R2-A1-E1-C1"},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"in","qty":18,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-05-02T10:19:00","loc":"R1-A2-E2-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"out","qty":8,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-05-01T17:38:50","loc":"R1-A3-E2-C1"},{"ean":"4006381333903","name":"Bouton corne Ø22mm","type":"in","qty":16,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Julie Laurent","date":"2026-05-01T15:28:21","loc":"R2-A3-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":14,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-05-01T10:09:51","loc":"R2-A1-E1-C1"},{"ean":"8712100450002","name":"Fermoir tournette argent 18mm","type":"in","qty":2,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-05-01T09:52:04","loc":"R1-A2-E1-C1"},{"ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","type":"in","qty":16,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Pierre Blanc","date":"2026-04-30T16:04:10","loc":"R1-A1-E1-C1"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"in","qty":20,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-04-30T12:55:37","loc":"R1-A2-E2-C1"},{"ean":"4006381333904","name":"Bouton logo CD argenté Ø15mm","type":"in","qty":6,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-04-30T09:48:13","loc":"R1-A3-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":15,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-04-29T12:02:14","loc":""},{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"in","qty":7,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Administrateur","date":"2026-04-29T09:43:14","loc":"R1-A3-E3-C1"},{"ean":"3700089690013","name":"Bandoulière tressée havane 100cm","type":"in","qty":1,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Administrateur","date":"2026-04-28T17:16:01","loc":"R1-A3-E1-C1"},{"ean":"3700089690013","name":"Bandoulière tressée havane 100cm","type":"out","qty":6,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-28T16:31:28","loc":"R1-A1-E3-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"out","qty":3,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-04-28T14:07:34","loc":"R1-A3-E2-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":17,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-04-28T09:29:44","loc":""},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":15,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Administrateur","date":"2026-04-28T09:03:10","loc":""},{"ean":"3700089690012","name":"Bandoulière chaîne dorée 110cm","type":"in","qty":15,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Pierre Blanc","date":"2026-04-27T18:52:17","loc":"R1-A2-E1-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"transfer","qty":5,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-04-27T18:00:00","note":"→ Atelier Nice – Couture"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"in","qty":16,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-04-27T12:11:37","loc":"R1-A2-E2-C1"},{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","type":"in","qty":12,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-04-25T16:52:00","loc":""},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":9,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-04-25T14:44:31","loc":""},{"ean":"5706998051004","name":"Zip métal laiton 25cm","type":"out","qty":6,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-25T13:26:21","loc":"R1-A1-E2-C1"},{"ean":"5706998051004","name":"Zip métal laiton 25cm","type":"in","qty":13,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-25T08:29:05","loc":"R1-A1-E2-C1"},{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","type":"in","qty":5,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-04-24T17:48:31","loc":"R1-A3-E1-C1"},{"ean":"3760170192801","name":"Anneau D métal doré 20mm","type":"in","qty":20,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-04-24T12:28:56","loc":"R2-A1-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":3,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-24T11:45:10","loc":""},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":8,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-04-23T15:59:45","loc":""},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"in","qty":5,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-04-23T11:53:58","loc":"R1-A2-E1-C1"},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"in","qty":11,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Administrateur","date":"2026-04-22T18:31:55","loc":"R1-A2-E2-C1"},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"in","qty":17,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-04-22T15:15:29","loc":"R1-A2-E2-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":10,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-04-22T12:52:00","loc":""},{"ean":"5706998051002","name":"Zip YKK 30cm – Camel","type":"in","qty":17,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-22T10:55:04","loc":"R1-A3-E3-C1"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"out","qty":7,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Julie Laurent","date":"2026-04-21T17:24:14","loc":"R1-A2-E1-C1"},{"ean":"8712100450002","name":"Fermoir tournette argent 18mm","type":"out","qty":4,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-21T16:48:34","loc":"R1-A2-E1-C1"},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"in","qty":19,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-04-21T14:42:50","loc":"R1-A2-E2-C1"},{"ean":"8712100450004","name":"Boucle réglable laiton 35mm","type":"in","qty":1,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Administrateur","date":"2026-04-20T13:55:06","loc":"R1-A3-E1-C1"},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"in","qty":1,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Marc Dubois","date":"2026-04-18T18:45:55","loc":"R1-A2-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":2,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-04-18T18:43:58","loc":"R2-A1-E1-C1"},{"ean":"3760170192801","name":"Anneau D métal doré 20mm","type":"in","qty":8,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-18T14:20:40","loc":""},{"ean":"8712100450002","name":"Fermoir tournette argent 18mm","type":"out","qty":9,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-18T13:39:44","loc":""},{"ean":"4006381333902","name":"Bouton nacre Ø12mm","type":"out","qty":5,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Pierre Blanc","date":"2026-04-18T10:26:55","loc":"R2-A2-E1-C1"},{"ean":"3760170192801","name":"Anneau D métal doré 20mm","type":"in","qty":9,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-04-17T17:43:15","loc":""},{"ean":"4006381333903","name":"Bouton corne Ø22mm","type":"in","qty":13,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-04-17T11:33:26","loc":"R2-A3-E1-C1"},{"ean":"3700089690012","name":"Bandoulière chaîne dorée 110cm","type":"out","qty":3,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-17T08:20:50","loc":"R1-A1-E2-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"out","qty":10,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Pierre Blanc","date":"2026-04-16T17:18:44","loc":"R2-A1-E1-C1"},{"ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","type":"in","qty":6,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-16T15:16:42","loc":"R1-A1-E1-C1"},{"ean":"3760170192801","name":"Anneau D métal doré 20mm","type":"out","qty":6,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-04-16T12:12:24","loc":"R2-A1-E1-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":15,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-04-16T09:28:22","loc":""},{"ean":"3700089690012","name":"Bandoulière chaîne dorée 110cm","type":"out","qty":5,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Pierre Blanc","date":"2026-04-15T18:49:47","loc":"R1-A1-E2-C1"},{"ean":"8712100450001","name":"Fermoir clip laiton 25mm","type":"in","qty":5,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-04-15T11:38:51","loc":"R2-A3-E1-C1"},{"ean":"3700089690012","name":"Bandoulière chaîne dorée 110cm","type":"in","qty":12,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Pierre Blanc","date":"2026-04-14T18:06:57","loc":"R1-A1-E2-C1"},{"ean":"3760170192802","name":"Œillet pression Ø10mm – Or","type":"out","qty":5,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-04-14T16:56:23","loc":"R1-A3-E2-C1"},{"ean":"5706998051003","name":"Zip invisible 40cm – Beige","type":"in","qty":5,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Pierre Blanc","date":"2026-04-14T10:05:58","loc":"R1-A1-E1-C1"},{"ean":"5706998051004","name":"Zip métal laiton 25cm","type":"in","qty":5,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Pierre Blanc","date":"2026-04-13T15:51:18","loc":"R2-A2-E1-C1"},{"ean":"8712100450001","name":"Fermoir clip laiton 25mm","type":"in","qty":20,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Marc Dubois","date":"2026-04-11T17:24:52","loc":"R2-A3-E1-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"in","qty":15,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Sophie Martin","date":"2026-04-11T16:20:58","loc":"R1-A3-E2-C1"},{"ean":"8712100450002","name":"Fermoir tournette argent 18mm","type":"in","qty":13,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-04-11T11:55:43","loc":""},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"in","qty":9,"depotId":"thv3a3zmf8mdd4v","depotName":"Atelier Lyon – Sellerie","operator":"Julie Laurent","date":"2026-04-11T08:16:34","loc":"R1-A2-E1-C1"},{"ean":"8712100450003","name":"Fermoir magnétique plat 20mm","type":"out","qty":2,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-04-10T18:47:44","loc":"R1-A2-E2-C1"},{"ean":"5706998051001","name":"Zip YKK 20cm – Noir","type":"out","qty":6,"depotId":"30t9nt3w5uzbikc","depotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-04-10T15:07:06","loc":"R1-A3-E2-C1"},{"ean":"4006381333901","name":"Bouton métal doré Ø18mm","type":"in","qty":10,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie","operator":"Sophie Martin","date":"2026-04-10T12:41:26","loc":"R2-A1-E1-C1"}],"transfers":[{"id":"4w7kyhqin9n6xcj","ean":"3700089690011","name":"Bandoulière cuir naturel 120cm","qty":8,"fromDepotId":"xaji0y6dpbhsahx","fromDepotName":"Atelier Paris – Maroquinerie","toDepotId":"thv3a3zmf8mdd4v","toDepotName":"Atelier Lyon – Sellerie","operator":"Sophie Martin","date":"2026-05-07T18:00:00","status":"pending"},{"id":"883dhx8bm92h3tv","ean":"4006381333901","name":"Bouton métal doré Ø18mm","qty":25,"fromDepotId":"xaji0y6dpbhsahx","fromDepotName":"Atelier Paris – Maroquinerie","toDepotId":"30t9nt3w5uzbikc","toDepotName":"Atelier Nice – Couture","operator":"Julie Laurent","date":"2026-05-01T18:00:00","status":"done","receivedBy":"Pierre Blanc","receivedDate":"2026-05-02T18:00:00"},{"id":"3i12vj99t2d5em2","ean":"8712100450001","name":"Fermoir clip laiton 25mm","qty":15,"fromDepotId":"thv3a3zmf8mdd4v","fromDepotName":"Atelier Lyon – Sellerie","toDepotId":"30t9nt3w5uzbikc","toDepotName":"Atelier Nice – Couture","operator":"Marc Dubois","date":"2026-05-04T18:00:00","status":"done","receivedBy":"Pierre Blanc","receivedDate":"2026-05-05T18:00:00"}],"users":{"idkwnnhj7xvg0fn":{"id":"idkwnnhj7xvg0fn","name":"Administrateur","role":"admin","pin":"1234","depotId":"xaji0y6dpbhsahx"},"9xuy41ibljh75lx":{"id":"9xuy41ibljh75lx","name":"Sophie Martin","role":"manager","pin":"2345","depotId":"xaji0y6dpbhsahx"},"o6qjiujv6oh9sdb":{"id":"o6qjiujv6oh9sdb","name":"Marc Dubois","role":"manager","pin":"3456","depotId":"thv3a3zmf8mdd4v"},"dw2pcn9t84azytj":{"id":"dw2pcn9t84azytj","name":"Julie Laurent","role":"operator","pin":"4567","depotId":"xaji0y6dpbhsahx"},"xepq85jsg65kxvf":{"id":"xepq85jsg65kxvf","name":"Pierre Blanc","role":"operator","pin":"5678","depotId":"30t9nt3w5uzbikc"}},"depots":{"xaji0y6dpbhsahx":{"id":"xaji0y6dpbhsahx","name":"Atelier Paris – Maroquinerie","location":"Paris, 8e","code":"DEP-01"},"thv3a3zmf8mdd4v":{"id":"thv3a3zmf8mdd4v","name":"Atelier Lyon – Sellerie","location":"Lyon, 6e","code":"DEP-02"},"30t9nt3w5uzbikc":{"id":"30t9nt3w5uzbikc","name":"Atelier Nice – Couture","location":"Nice, Vieux","code":"DEP-03"}},"locations":{"1t2tala753lc58d":{"id":"1t2tala753lc58d","rack":"R1","allee":"A1","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Bandoulières courtes"},"rc11ertj5pht0hl":{"id":"rc11ertj5pht0hl","rack":"R1","allee":"A2","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Bandoulières longues"},"9xpseimvihcwi64":{"id":"9xpseimvihcwi64","rack":"R1","allee":"A3","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Boutons métal"},"ciyhe7ur23gdppq":{"id":"ciyhe7ur23gdppq","rack":"R2","allee":"A1","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Boutons nacre/corne"},"0y9dom5igqpki7p":{"id":"0y9dom5igqpki7p","rack":"R2","allee":"A2","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Zips noirs"},"5tb94874frhocn9":{"id":"5tb94874frhocn9","rack":"R2","allee":"A3","etagere":"E1","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Zips colorés"},"j2qp89uzfk8ut0c":{"id":"j2qp89uzfk8ut0c","rack":"R1","allee":"A1","etagere":"E1","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Bandoulières"},"vs4f8cgvyie6ivw":{"id":"vs4f8cgvyie6ivw","rack":"R1","allee":"A1","etagere":"E2","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Boutons"},"pvs7hzioykl1cq9":{"id":"pvs7hzioykl1cq9","rack":"R1","allee":"A1","etagere":"E3","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Zips"},"9chj755nf4zw9xa":{"id":"9chj755nf4zw9xa","rack":"R1","allee":"A2","etagere":"E1","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Fermoirs"},"3kx7eedtjvzhwjr":{"id":"3kx7eedtjvzhwjr","rack":"R1","allee":"A2","etagere":"E2","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Accessoires"},"64dpja1wj0tpac5":{"id":"64dpja1wj0tpac5","rack":"R1","allee":"A2","etagere":"E3","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Stock réserve"},"6t4ufel6246hid2":{"id":"6t4ufel6246hid2","rack":"R1","allee":"A3","etagere":"E1","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Entrées récentes"},"5owf75935a0l725":{"id":"5owf75935a0l725","rack":"R1","allee":"A3","etagere":"E2","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Sorties préparées"},"3j2d54i3qk2iagl":{"id":"3j2d54i3qk2iagl","rack":"R1","allee":"A3","etagere":"E3","case":"C1","depotId":"thv3a3zmf8mdd4v","desc":"Zone contrôle"},"58kxo9t7e8g8jdp":{"id":"58kxo9t7e8g8jdp","rack":"R1","allee":"A1","etagere":"E1","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Saisonniers"},"0lvsnujza7tz0yn":{"id":"0lvsnujza7tz0yn","rack":"R1","allee":"A1","etagere":"E2","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Collection"},"cxll4zklookep7y":{"id":"cxll4zklookep7y","rack":"R1","allee":"A1","etagere":"E3","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Accessoires fins"},"6wktakpuxqphr62":{"id":"6wktakpuxqphr62","rack":"R1","allee":"A2","etagere":"E1","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Zips spéciaux"},"gdswm31yihair4c":{"id":"gdswm31yihair4c","rack":"R1","allee":"A2","etagere":"E2","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Fermoirs prestige"},"owgzrixa11dpg8s":{"id":"owgzrixa11dpg8s","rack":"R1","allee":"A2","etagere":"E3","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Boutons luxe"},"bi4q2y9v86wzs3t":{"id":"bi4q2y9v86wzs3t","rack":"R1","allee":"A3","etagere":"E1","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Stock exposition"},"60rjiw1swjckjlt":{"id":"60rjiw1swjckjlt","rack":"R1","allee":"A3","etagere":"E2","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Retours"},"eiyzcotohp6vz41":{"id":"eiyzcotohp6vz41","rack":"R1","allee":"A3","etagere":"E3","case":"C1","depotId":"30t9nt3w5uzbikc","desc":"Zone inventaire"},"ohgi1jnyt7rpwh6":{"id":"ohgi1jnyt7rpwh6","rack":"R2","allee":"A1","etagere":"E2","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Bandoulières premium"},"nnyfx4m8t1qojah":{"id":"nnyfx4m8t1qojah","rack":"R2","allee":"A2","etagere":"E2","case":"C2","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Boutons spéciaux"},"9tq6v9mh7f2v97x":{"id":"9tq6v9mh7f2v97x","rack":"R2","allee":"A3","etagere":"E2","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Zips longs"},"bar3cpdlalsh2bh":{"id":"bar3cpdlalsh2bh","rack":"R2","allee":"A1","etagere":"E2","case":"C2","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Fermoirs complexes"},"jo1mz7e5v0vodfg":{"id":"jo1mz7e5v0vodfg","rack":"R2","allee":"A2","etagere":"E2","case":"C1","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Accessoires divers"},"gfhu124e3gckvbh":{"id":"gfhu124e3gckvbh","rack":"R2","allee":"A3","etagere":"E2","case":"C2","depotId":"xaji0y6dpbhsahx","desc":"Zone B – Stock sécurité"}},"audit":[{"id":"x9dvnu80b6ugvs8","type":"login","action":"Connexion de Administrateur","operator":"Administrateur","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T00:00:00","meta":{"depotName":"Atelier Paris – Maroquinerie","role":"admin"}},{"id":"9l8lpqw2vmcqbnk","type":"admin","action":"Import catalogue : 17 article(s)","operator":"Pierre Blanc","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T03:00:00","meta":{"count":17}},{"id":"fdjgf1c8wquuy5x","type":"transfer","action":"Réception 25 × Bouton métal doré depuis Paris","operator":"Julie Laurent","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T06:00:00","meta":{"ean":"4006381333901","qty":25}},{"id":"poc50h2cwtg1m8x","type":"in","action":"Entrée +50 × Bouton nacre Ø12mm","operator":"Marc Dubois","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T09:00:00","meta":{"ean":"4006381333902","qty":50,"depotId":"30t9nt3w5uzbikc"}},{"id":"clpoxko8g8qynpd","type":"login","action":"Connexion de Pierre Blanc","operator":"Sophie Martin","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T12:00:00","meta":{"depotName":"Atelier Nice – Couture","role":"operator"}},{"id":"1kerpetiuymo0pq","type":"out","action":"Sortie −8 × Fermoir tournette argent 18mm","operator":"Administrateur","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T15:00:00","meta":{"ean":"8712100450002","qty":8,"depotId":"xaji0y6dpbhsahx"}},{"id":"ohsmdyvslh9bh81","type":"login","action":"Connexion de Julie Laurent","operator":"Pierre Blanc","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T18:00:00","meta":{"depotName":"Atelier Paris – Maroquinerie","role":"operator"}},{"id":"nqfll7v5f1bcppv","type":"admin","action":"Article créé : Boucle réglable laiton 35mm","operator":"Julie Laurent","depotId":"xaji0y6dpbhsahx","date":"2026-05-08T21:00:00","meta":{"ean":"8712100450004"}},{"id":"xybj17mgfxc08dt","type":"inv","action":"Inventaire guidé validé — 3 correction(s)","operator":"Marc Dubois","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T00:00:00","meta":{"depotId":"xaji0y6dpbhsahx","corrections":3}},{"id":"fr4muekipu1wyuv","type":"in","action":"Entrée +20 × Fermoir clip laiton 25mm","operator":"Sophie Martin","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T03:00:00","meta":{"ean":"8712100450001","qty":20,"depotId":"thv3a3zmf8mdd4v"}},{"id":"ec8uyo57p6bklds","type":"login","action":"Connexion de Marc Dubois","operator":"Administrateur","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T06:00:00","meta":{"depotName":"Atelier Lyon – Sellerie","role":"manager"}},{"id":"o3o0llj8yrddp0n","type":"transfer","action":"Transfert 8 × Bandoulière cuir naturel 120cm → Lyon","operator":"Pierre Blanc","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T09:00:00","meta":{"ean":"3700089690011","qty":8,"fromDepot":"Paris","toDepot":"Lyon"}},{"id":"vznvksp2ex5t5p5","type":"out","action":"Sortie −12 × Zip YKK 20cm – Noir","operator":"Julie Laurent","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T12:00:00","meta":{"ean":"5706998051001","qty":12,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie"}},{"id":"xkxb94pdzp6lfew","type":"in","action":"Entrée +30 × Bouton métal doré Ø18mm","operator":"Marc Dubois","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T15:00:00","meta":{"ean":"4006381333901","qty":30,"depotId":"xaji0y6dpbhsahx","depotName":"Atelier Paris – Maroquinerie"}},{"id":"vajepecqnvqhw06","type":"login","action":"Connexion de Sophie Martin","operator":"Sophie Martin","depotId":"xaji0y6dpbhsahx","date":"2026-05-09T18:00:00","meta":{"depotName":"Atelier Paris – Maroquinerie","role":"manager"}}]}');
+  return demo;
+}
 let db=loadDB();
+// ── STATE ──
 let S=null,curEAN=null,curOp='in',curArtEAN=null,curStkEAN=null;
 let curUserId=null,curDepotId=null,curLocId=null,curLocDetId=null;
-let scannerOn=false,sfFilter='all',invLocal={},ttab='pending',htab='all',afFilter='all';
-let guidedInv=[],guidedIdx=0,guidedDepot=null,sigDrawing=false,sigHasData=false;
-let sigCtx,sigLastX,sigLastY,scanStream=null,scanInterval=null;
-let viewStack=['home'];
+let catFam='all',sfFilter='all',ttab='pending',htab='all',afFilter='all';
+let invLocal={},guidedInv=[],guidedIdx=0,guidedDepot=null;
+let sigDrawing=false,sigHasData=false,sigCtx,sigLastX,sigLastY;
+const AUDIT_ICONS={in:'📥',out:'📤',inv:'📋',transfer:'↔️',login:'🔐',admin:'⚙️'};
+const SHEET_MAP={art:'art-sheet-bg',stk:'stk-sheet-bg',usr:'usr-sheet-bg',dep:'dep-sheet-bg',loc:'loc-sheet-bg','art-hist':'art-hist-bg',locdet:'locdet-sheet-bg'};
 
-// ══════════════════════════════════════ LOGIN
+
+// ══ LOGIN ══
 function buildLoginDepots(){
   const s=document.getElementById('li-depot');
+  if(!s)return;
   s.innerHTML=Object.values(db.depots).map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('');
 }
 buildLoginDepots();
@@ -1569,7 +1264,7 @@ function doLogin(){
     buildTrTargets();renderHome();updateMenuBadge();
   }catch(e){console.error('doLogin:',e);setErr('Erreur : '+e.message);}
 }
-function setErr(m){document.getElementById('li-err').textContent=m;}
+function setErr(m){const el=document.getElementById('li-err');if(el)el.textContent=m;}
 document.getElementById('li-pin').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 document.getElementById('li-name').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('li-pin').focus();});
 
@@ -1579,20 +1274,19 @@ function doLogout(){
   S=null;closeMenu();
   ['app-header','app-main','app-nav'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('login-screen').style.display='flex';
-  document.getElementById('li-pin').value='';document.getElementById('li-err').textContent='';
+  document.getElementById('li-pin').value='';
+  setErr('');
   document.getElementById('menu-advanced-section').style.display='none';
   buildLoginDepots();
 }
 
-// ══════════════════════════════════════ NAV
-const HOME_VIEWS=['home'];
-const SCAN_VIEWS=['scan'];
-const STOCK_VIEWS=['stock'];
-const CARTO_VIEWS=['cartography'];
+
+// ══ NAV ══
 const VIEW_TITLES={
   home:'',scan:'Scanner',dashboard:'Tableau de bord',catalogue:'Catalogue',
   stock:'Stock',cartography:'Cartographie',inventory:'Inventaire',
-  transfers:'Transferts','photo-analysis':'Analyser un produit',history:'Historique',audit:'Audit',admin:'Administration'
+  transfers:'Transferts',history:'Historique',audit:'Audit',admin:'Administration',
+  'photo-analysis':'Analyser un produit'
 };
 
 function showView(n){
@@ -1600,20 +1294,16 @@ function showView(n){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   const view=document.getElementById('view-'+n);
   if(view)view.classList.add('active');
-  // Active nav btn
-  if(HOME_VIEWS.includes(n))document.getElementById('nav-home').classList.add('active');
-  else if(SCAN_VIEWS.includes(n))document.getElementById('nav-scan').classList.add('active');
-  else if(STOCK_VIEWS.includes(n))document.getElementById('nav-stock').classList.add('active');
-  else if(CARTO_VIEWS.includes(n))document.getElementById('nav-cartography').classList.add('active');
-
-  // Header back button
+  const navMap={home:'nav-home',scan:'nav-scan',stock:'nav-stock',cartography:'nav-cartography'};
+  if(navMap[n])document.getElementById(navMap[n]).classList.add('active');
   const showBack=(n!=='home');
-  document.getElementById('hdr-back-btn').style.display=showBack?'flex':'none';
-  document.getElementById('hdr-brand').style.display=showBack?'none':'block';
-  document.getElementById('hdr-title').style.display=showBack?'block':'none';
-  document.getElementById('hdr-title').textContent=VIEW_TITLES[n]||'';
-
-  if(scannerOn&&n!=='scan')stopScanner();
+  const backBtn=document.getElementById('hdr-back-btn');
+  const brand=document.getElementById('hdr-brand');
+  const title=document.getElementById('hdr-title');
+  if(backBtn)backBtn.style.display=showBack?'flex':'none';
+  if(brand)brand.style.display=showBack?'none':'block';
+  if(title){title.style.display=showBack?'block':'none';title.textContent=VIEW_TITLES[n]||'';}
+  if(typeof scannerOn!=='undefined'&&scannerOn&&n!=='scan')stopScanner();
   if(n==='home')renderHome();
   if(n==='dashboard')renderDashboard();
   if(n==='catalogue')renderCat();
@@ -1621,7 +1311,7 @@ function showView(n){
   if(n==='cartography')renderCartography();
   if(n==='inventory')renderInvMode();
   if(n==='transfers')renderTransfers();
-  if(n==='history'){htab='all';document.getElementById('hist-search-zone').style.display='none';renderHistory();}
+  if(n==='history'){htab='all';const hsz=document.getElementById('hist-search-zone');if(hsz)hsz.style.display='none';renderHistory();}
   if(n==='audit')renderAudit();
   if(n==='admin')renderAdmin();
   if(n==='photo-analysis')resetPhotoAnalysis();
@@ -1629,224 +1319,451 @@ function showView(n){
 }
 function goHome(){showView('home');}
 
-// ══════════════════════════════════════ MENU DRAWER
+// ══ MENU ══
 function openMenu(){updateMenuBadge();document.getElementById('menu-drawer-bg').classList.add('on');}
 function closeMenu(){document.getElementById('menu-drawer-bg').classList.remove('on');}
 function updateMenuBadge(){
   if(!S)return;
   const pend=db.transfers.filter(t=>t.status==='pending'&&t.toDepotId===S.depotId).length;
   const b=document.getElementById('menu-tr-badge');
-  if(pend>0){b.style.display='inline-block';b.textContent=pend;}else{b.style.display='none';}
+  if(b){if(pend>0){b.style.display='inline-block';b.textContent=pend;}else{b.style.display='none';}}
 }
 
-// ══════════════════════════════════════ HOME
+// ══ HOME ══
 function renderHome(){
+  if(!S)return;
   const firstName=S.name.split(' ')[0];
-  document.getElementById('home-greeting').textContent='';
-  document.getElementById('home-name').innerHTML=`${firstName}`;
-  document.getElementById('home-depot-name').textContent=S.depotName;
+  const greetEl=document.getElementById('home-greeting');
+  const nameEl=document.getElementById('home-name');
+  if(greetEl)greetEl.textContent='';
+  if(nameEl)nameEl.innerHTML=`<span>${esc(firstName)}</span>`;
+  const depNameEl=document.getElementById('home-depot-name');
+  if(depNameEl)depNameEl.textContent=S.depotName;
   const now=new Date();
-  document.getElementById('home-time').textContent=now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
-
+  const timeEl=document.getElementById('home-time');
+  if(timeEl)timeEl.textContent=now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
   // Quick stats
   const dep=S.depotId;
   const arts=Object.values(db.articles);
   const stocks=db.stocks[dep]||{};
   let totalUnits=0,alertCnt=0;
   arts.forEach(a=>{const q=stocks[a.ean]||0;totalUnits+=q;if(a.threshold>0&&q<=a.threshold)alertCnt++;});
-  const todayHist=db.history.filter(h=>{
-    const d=new Date(h.date);return d.toDateString()===now.toDateString()&&h.depotId===dep;
-  });
-  document.getElementById('home-quick-stats').innerHTML=`
+  const todayHist=db.history.filter(h=>{const d=new Date(h.date);return d.toDateString()===now.toDateString()&&h.depotId===dep;});
+  const qsEl=document.getElementById('home-quick-stats');
+  if(qsEl)qsEl.innerHTML=`
     <div class="qstat"><div class="qstat-val">${totalUnits.toLocaleString('fr-FR')}</div><div class="qstat-lbl">Unités stock</div></div>
     <div class="qstat"><div class="qstat-val ${alertCnt>0?'red':'green'}">${alertCnt}</div><div class="qstat-lbl">Alertes</div></div>
     <div class="qstat"><div class="qstat-val">${todayHist.length}</div><div class="qstat-lbl">Mvts aujourd'hui</div></div>`;
-
-  // Pending transfers banner
+  // Banner transferts
   const pend=db.transfers.filter(t=>t.status==='pending'&&t.toDepotId===dep);
   const banner=document.getElementById('home-banner-zone');
-  if(pend.length){
-    banner.innerHTML=`<div class="home-banner" onclick="showView('transfers')">
-      <div class="home-banner-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
-      <div class="home-banner-info">
-        <div class="home-banner-title">${pend.length} transfert(s) à recevoir</div>
-        <div class="home-banner-desc">Cliquez pour réceptionner</div>
-      </div>
-      <div class="home-banner-arrow">→</div>
-    </div>`;
-  } else banner.innerHTML='';
-
-  // Recent activity (last 5)
-  const recent=db.history.filter(h=>h.depotId===dep).slice(0,5);
-  const lbl={in:'Entrée',out:'Sortie',inv:'Inventaire',transfer:'Transfert',transfer_in:'Réception'};
-  const sgn={in:'+',out:'−',inv:'→',transfer:'−',transfer_in:'+'};
-  if(recent.length){
-    document.getElementById('home-recent').innerHTML=recent.map(h=>{
-      const tc=h.type==='transfer_in'?'transfer_in':h.type;
-      return `<div class="recent-item">
-        <div class="recent-bar ${tc}"></div>
-        <div class="recent-info">
-          <div class="recent-name">${esc(h.name)}</div>
-          <div class="recent-meta">${fmtRelativeDate(h.date)} · ${esc(h.operator||'')}</div>
-        </div>
-        <div class="recent-qty ${tc}">${sgn[h.type]||''}${h.qty}</div>
+  if(banner){
+    if(pend.length){
+      banner.innerHTML=`<div class="home-banner" onclick="showView('transfers')">
+        <div class="home-banner-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+        <div class="home-banner-info"><div class="home-banner-title">${pend.length} transfert(s) à recevoir</div><div class="home-banner-desc">Appuyer pour réceptionner</div></div>
+        <div class="home-banner-arrow">→</div>
       </div>`;
-    }).join('');
-  } else {
-    document.getElementById('home-recent').innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">Aucune activité</div></div>`;
+    }else banner.innerHTML='';
+  }
+  // Recent activity
+  const recent=db.history.filter(h=>h.depotId===dep).slice(0,5);
+  const sgn={in:'+',out:'−',inv:'→',transfer:'−',transfer_in:'+'};
+  const recentEl=document.getElementById('home-recent');
+  if(recentEl){
+    if(recent.length){
+      recentEl.innerHTML=recent.map(h=>{
+        const tc=h.type==='transfer_in'?'transfer_in':h.type;
+        return `<div class="recent-item">
+          <div class="recent-bar ${tc}"></div>
+          <div class="recent-info"><div class="recent-name">${esc(h.name)}</div><div class="recent-meta">${fmtRelativeDate(h.date)} · ${esc(h.operator||'')}</div></div>
+          <div class="recent-qty ${tc}">${sgn[h.type]||''}${h.qty}</div>
+        </div>`;
+      }).join('');
+    }else{
+      recentEl.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">Aucune activité</div></div>`;
+    }
   }
 }
 
-// ══════════════════════════════════════ OPERATIONS (Recevoir/Expédier/Transférer)
+// ══ OPERATIONS ══
 function startOperation(type){
-  // type: 'in' | 'out' | 'transfer' | 'quick'
   curOp=type==='quick'?'in':type;
   showView('scan');
-  const banner=document.getElementById('op-banner');
   const icon=document.getElementById('op-banner-icon');
   const text=document.getElementById('op-banner-text');
   const confirmBtn=document.getElementById('confirm-op-btn');
-  const labels={
-    in:{txt:'<strong>Mode Réception</strong> — Scannez pour entrer en stock',cls:'in',btn:'Valider la réception',
-        ico:'<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>'},
-    out:{txt:'<strong>Mode Expédition</strong> — Scannez pour sortir du stock',cls:'out',btn:'Valider la sortie',
-         ico:'<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 19V5M19 12l-7-7-7 7"/></svg>'},
-    transfer:{txt:'<strong>Mode Transfert</strong> — Scannez pour transférer',cls:'transfer',btn:'Valider le transfert',
-              ico:'<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>'},
-    quick:{txt:'<strong>Scanner libre</strong> — Choisissez l\'opération après détection',cls:'in',btn:'Valider',
-           ico:'<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'}
+  const cfg={
+    in:{txt:'<strong>Mode Réception</strong> — Scannez pour entrer en stock',cls:'in',btn:'Valider la réception',ico:'<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>'},
+    out:{txt:'<strong>Mode Expédition</strong> — Scannez pour sortir du stock',cls:'out',btn:'Valider la sortie',ico:'<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 19V5M19 12l-7-7-7 7"/></svg>'},
+    transfer:{txt:'<strong>Mode Transfert</strong> — Scannez pour transférer',cls:'transfer',btn:'Valider le transfert',ico:'<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>'},
+    quick:{txt:'<strong>Scanner libre</strong> — Choisissez l\'opération après détection',cls:'in',btn:'Valider',ico:'<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'}
   };
-  const l=labels[type]||labels.in;
-  icon.className='op-banner-icon '+l.cls;icon.innerHTML=l.ico;
-  text.innerHTML=l.txt;
-  confirmBtn.textContent=l.btn;
-  // Hide detection band until scan
-  document.getElementById('det-band').classList.remove('on');
+  const l=cfg[type]||cfg.in;
+  if(icon){icon.className='op-banner-icon '+l.cls;icon.innerHTML=l.ico;}
+  if(text)text.innerHTML=l.txt;
+  if(confirmBtn)confirmBtn.textContent=l.btn;
+  const band=document.getElementById('det-band');
+  if(band)band.classList.remove('on');
 }
 
-// ══════════════════════════════════════ SCANNER
-function toggleScanner(){scannerOn?stopScanner():startScanner();}
-async function startScanner(){
-  const idle=document.getElementById('sc-idle'),ui=document.getElementById('sc-ui');
-  const btn=document.getElementById('sc-toggle'),vp=document.getElementById('scanner-vp');
+// ══ BUILD TR TARGETS ══
+function buildTrTargets(){
+  const s=document.getElementById('tr-target');
+  if(!s)return;
+  s.innerHTML=Object.values(db.depots).filter(d=>S&&d.id!==S.depotId).map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('');
+}
 
-  // Vérifications préalables
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    showCameraError('Caméra non disponible','Utilisez Safari sur iPhone.');
+// ══ checkPending ══
+function checkPending(){
+  if(!S)return;
+  const pend=db.transfers.filter(t=>t.status==='pending'&&t.toDepotId===S.depotId).length;
+  const b=document.getElementById('pend-banner');
+  if(b)b.innerHTML='';
+  updateMenuBadge();
+}
+
+
+// ══════════════════════════════════════════════════════════
+//  SCANNER ENGINE v3 — Dynamsoft + fallback photo iOS
+//  Dynamsoft: scan continu, temps réel, iOS Safari 14+
+//  Fallback: photo capture si Dynamsoft indisponible
+// ══════════════════════════════════════════════════════════
+
+let scanStream = null, scanInterval = null, scannerOn = false;
+let dyRouter = null, dyCameraView = null, dyEnhancer = null;
+let dyLoaded = false, dyLoading = false;
+
+// Clé de trial publique Dynamsoft (valable pour évaluation)
+const DYNAMSOFT_LICENSE = 'DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9';
+
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+// ── Initialisation Dynamsoft (lazy load) ──
+async function initDynamsoft() {
+  if (dyLoaded) return true;
+  if (dyLoading) {
+    // Attendre qu'il soit prêt
+    return new Promise(resolve => {
+      const check = setInterval(() => { if (dyLoaded) { clearInterval(check); resolve(true); } }, 200);
+      setTimeout(() => { clearInterval(check); resolve(false); }, 10000);
+    });
+  }
+  if (typeof Dynamsoft === 'undefined') return false;
+  dyLoading = true;
+  try {
+    Dynamsoft.License.LicenseManager.initLicense(DYNAMSOFT_LICENSE, true);
+    await Dynamsoft.Core.CoreModule.loadWasm(['dbr']);
+    dyLoaded = true; dyLoading = false;
+    return true;
+  } catch(e) {
+    console.warn('[Scanner] Dynamsoft init failed:', e.message);
+    dyLoading = false; return false;
+  }
+}
+
+// ── Point d'entrée principal ──
+async function startScanAdaptive() {
+  if (scannerOn) { stopScanner(); return; }
+
+  // Vérifier contexte sécurisé
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    showCameraError('HTTPS requis', 'Ouvrez l\'app via GitHub Pages (https://) pour activer le scanner.');
     return;
   }
-  if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1'){
-    showCameraError('HTTPS requis','Hébergez sur GitHub Pages (HTTPS) pour activer la caméra.');
-    return;
+  try { if (window.self !== window.top) { showCameraError('Aperçu uniquement', 'Ouvrez l\'app directement dans Safari sur votre iPhone.'); return; } } catch(e) {}
+
+  // Essayer Dynamsoft en priorité (fonctionne sur iOS Safari)
+  const ds = await initDynamsoft();
+  if (ds) {
+    await startDynamsoftScanner();
+  } else {
+    // Fallback: photo capture
+    document.getElementById('sc-photo-input').value = '';
+    document.getElementById('sc-photo-input').click();
   }
-  try{
-    const inIframe=window.self!==window.top;
-    if(inIframe){
-      showCameraError('Caméra bloquée dans cet aperçu','Ouvrez l\'app directement dans Safari via GitHub Pages. La saisie manuelle fonctionne ici.');
-      return;
-    }
-  }catch(e){}
+}
 
-  idle.style.display='none';ui.style.display='flex';
-  btn.innerHTML='<svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/></svg> Arrêter';
+// ── Scanner Dynamsoft (continu, temps réel, iOS + Android) ──
+async function startDynamsoftScanner() {
+  const vp = document.getElementById('scanner-vp');
+  const idle = document.getElementById('sc-idle');
+  const ui = document.getElementById('sc-ui');
+  const dceContainer = document.getElementById('dce-view-container');
 
-  try{
-    // Essayer caméra arrière, fallback sur toute caméra
-    let stream=null;
-    try{
-      stream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{exact:'environment'},width:{ideal:1280},height:{ideal:720}}
-      });
-    }catch(e){
-      stream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
-      });
-    }
-    scanStream=stream;
+  idle.style.display = 'none';
+  ui.style.display = 'flex';
+  document.getElementById('sc-btn-label').textContent = 'Arrêter';
+  scannerOn = true;
 
-    const video=document.createElement('video');
-    video.srcObject=scanStream;
-    video.setAttribute('playsinline','');
-    video.setAttribute('autoplay','');
-    video.muted=true;
-    vp.appendChild(video);
-    await video.play();
-    scannerOn=true;
+  try {
+    // Créer CameraView et CameraEnhancer
+    dyCameraView = await Dynamsoft.DCE.CameraView.createInstance();
+    dyEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(dyCameraView);
 
-    // ── Stratégie de décodage ──
-    // 1. BarcodeDetector (Chrome Android, Chrome desktop) — natif, rapide
-    // 2. BarcodeScanner (pure JS) — fallback Safari iOS & Firefox
-    if('BarcodeDetector' in window){
-      // BarcodeDetector disponible (Chrome/Android)
-      const bd=new BarcodeDetector({formats:['ean_13','ean_8','qr_code','code_128','upc_a','upc_e']});
-      scanInterval=setInterval(async()=>{
-        if(!video.readyState||video.readyState<2)return;
-        try{
-          const codes=await bd.detect(video);
-          if(codes&&codes.length>0){
-            const c=codes[0].rawValue;stopScanner();
-            if(c.startsWith('LOC:')){handleLocationQR(c);}
-            else if(c.length>=8){handleEAN(c);}
-          }
-        }catch(e){}
-      },350);
-    }else{
-      // Fallback pur JS — Safari iOS, Firefox, etc.
-      await BarcodeScanner.init(video, function(code){
-        if(code&&code.length>=8){
-          stopScanner();
-          if(code.startsWith('LOC:')){handleLocationQR(code);}
-          else{handleEAN(code);}
-        }
-      });
-      BarcodeScanner.start();
-      scanInterval='purejs';
-    }
+    // Injecter l'UI dans notre container
+    dceContainer.innerHTML = '';
+    dceContainer.appendChild(dyCameraView.getUIElement());
+    dceContainer.style.display = 'block';
 
-  }catch(err){
+    // Configurer la région de scan (bande centrale)
+    await dyEnhancer.setScanRegion({
+      x: 0, y: 25, width: 100, height: 50,
+      isMeasuredInPercentage: true
+    });
+
+    // Créer le router de capture
+    dyRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+    dyRouter.setInput(dyEnhancer);
+
+    // Écouter les résultats
+    dyRouter.addResultReceiver({
+      onDecodedBarcodesReceived: (result) => {
+        const items = result.barcodeResultItems;
+        if (!items || !items.length) return;
+        const code = items[0].text;
+        if (!code || code.length < 8) return;
+        stopScanner();
+        if (code.startsWith('LOC:')) { handleLocationQR(code); }
+        else { handleEAN(code); }
+      }
+    });
+
+    // Ouvrir la caméra (préférence arrière)
+    await dyEnhancer.open();
+    try {
+      const cameras = await dyEnhancer.getAllCameras();
+      const back = cameras.find(c => c.label && /back|rear|environment/i.test(c.label));
+      if (back) await dyEnhancer.selectCamera(back);
+    } catch(e) {}
+
+    // Démarrer la capture
+    await dyRouter.startCapturing('ReadSingleBarcode');
+
+  } catch(e) {
+    console.error('[Dynamsoft] Error:', e);
     stopScanner();
-    let titre='Caméra inaccessible';
-    let detail='';
-    if(err.name==='NotAllowedError'||err.name==='PermissionDeniedError'){
-      titre='Permission refusée';
-      detail='Allez dans Réglages → Safari → Caméra → Autoriser, puis réessayez.';
-    }else if(err.name==='NotFoundError'){
-      titre='Aucune caméra trouvée';
-      detail='Cet appareil ne dispose pas de caméra.';
-    }else if(err.name==='NotReadableError'){
-      titre='Caméra occupée';
-      detail='La caméra est utilisée par une autre app. Fermez-la et réessayez.';
-    }else{
-      detail=err.message||err.name||'Erreur inconnue';
-    }
-    showCameraError(titre, detail);
+    showCameraError('Erreur scanner', 'Fallback mode photo activé.');
+    setTimeout(() => { document.getElementById('sc-photo-input').click(); }, 500);
   }
 }
 
-function showCameraError(titre, detail){
-  // Afficher erreur dans le viewport scanner ET ouvrir saisie manuelle
-  const vp=document.getElementById('scanner-vp');
-  const idle=document.getElementById('sc-idle');
-  idle.style.display='flex';
-  idle.innerHTML=`
-    <div style="padding:20px;text-align:center">
-      <div style="font-size:28px;opacity:.4;margin-bottom:10px">📷</div>
-      <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#c00;margin-bottom:6px">${esc(titre)}</div>
-      <div style="font-size:10px;color:#888;line-height:1.5;max-width:260px">${esc(detail)}</div>
-      <button onclick="resetScanIdle()" style="margin-top:14px;padding:8px 16px;background:#fff;border:1px solid #ccc;font-size:9px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer">Réessayer</button>
-    </div>`;
-  // Auto-ouvrir la saisie manuelle
-  const mz=document.getElementById('manual-zone');
-  if(mz){mz.style.display='block';document.getElementById('m-ean').focus();}
+// ── Stop scanner ──
+function stopScanner() {
+  scannerOn = false;
+
+  // Arrêter Dynamsoft
+  if (dyRouter) { try { dyRouter.stopCapturing(); dyRouter.dispose(); } catch(e){} dyRouter = null; }
+  if (dyEnhancer) { try { dyEnhancer.close(); dyEnhancer.dispose(); } catch(e){} dyEnhancer = null; }
+  if (dyCameraView) { try { dyCameraView.dispose(); } catch(e){} dyCameraView = null; }
+  const dceContainer = document.getElementById('dce-view-container');
+  if (dceContainer) { dceContainer.style.display = 'none'; dceContainer.innerHTML = ''; }
+
+  // Arrêter stream vidéo si actif
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  const vp = document.getElementById('scanner-vp');
+  if (vp) { const vid = vp.querySelector('video'); if (vid) vid.remove(); }
+
+  document.getElementById('sc-idle').style.display = 'flex';
+  document.getElementById('sc-ui').style.display = 'none';
+  const lbl = document.getElementById('sc-btn-label');
+  if (lbl) lbl.textContent = 'Scanner';
 }
 
-function resetScanIdle(){
-  const idle=document.getElementById('sc-idle');
-  idle.innerHTML=`
-    <svg width="44" height="32" fill="none" viewBox="0 0 44 32"><rect x=".5" y=".5" width="43" height="31" stroke="#444" stroke-width=".7"/><line x1="5" y1="5" x2="5" y2="27" stroke="#666" stroke-width=".8"/><line x1="9" y1="3" x2="9" y2="29" stroke="#666" stroke-width="1.2"/><line x1="14" y1="5" x2="14" y2="27" stroke="#666" stroke-width=".8"/><line x1="18" y1="3" x2="18" y2="29" stroke="#666" stroke-width=".8"/><line x1="22" y1="5" x2="22" y2="27" stroke="#666" stroke-width="1.2"/><line x1="26" y1="3" x2="26" y2="29" stroke="#666" stroke-width=".8"/><line x1="30" y1="5" x2="30" y2="27" stroke="#666" stroke-width=".8"/><line x1="34" y1="3" x2="34" y2="29" stroke="#666" stroke-width="1.2"/><line x1="38" y1="5" x2="38" y2="27" stroke="#666" stroke-width=".8"/></svg>
-    <div class="scan-idle-txt">Appuyer pour scanner<br>EAN13 ou QR emplacement</div>`;
-  idle.onclick=startScanner;
+// ── iOS photo fallback (si Dynamsoft indisponible) ──
+async function handlePhotoScan(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const vp = document.getElementById('scanner-vp');
+  const idle = document.getElementById('sc-idle');
+  idle.style.display = 'none';
+
+  const loadDiv = document.createElement('div');
+  loadDiv.className = 'scan-loading';
+  loadDiv.innerHTML = '<div class="scan-spinner"></div><div style="color:#888;font-size:9px;letter-spacing:.2em;text-transform:uppercase">Décodage en cours…</div>';
+  vp.appendChild(loadDiv);
+
+  try {
+    let code = null;
+
+    // Essayer Dynamsoft sur l'image fixe
+    const ds = await initDynamsoft();
+    if (ds) {
+      try {
+        const r = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+        const results = await r.capture(file, 'ReadSingleBarcode');
+        r.dispose();
+        const items = results.items.filter(i => i.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE);
+        if (items.length) code = items[0].text;
+      } catch(e) { console.warn('Dynamsoft image decode failed:', e); }
+    }
+
+    // Fallback décodeur JS si Dynamsoft ne trouve rien
+    if (!code) code = await decodeImageFile(file);
+
+    vp.removeChild(loadDiv);
+    idle.style.display = 'flex';
+    input.value = '';
+
+    if (code) {
+      const flash = document.createElement('div');
+      flash.className = 'scan-result-flash';
+      flash.textContent = '✓';
+      vp.appendChild(flash);
+      setTimeout(() => { try { vp.removeChild(flash); } catch(e){} }, 600);
+      if (code.startsWith('LOC:')) { handleLocationQR(code); }
+      else if (code.length >= 8) { handleEAN(code); }
+    } else {
+      showCameraError('Code non détecté', 'Cadrez le code-barres au centre, bien éclairé. Réessayez.');
+    }
+  } catch(e) {
+    try { vp.removeChild(loadDiv); } catch(e2){}
+    idle.style.display = 'flex';
+    input.value = '';
+    showCameraError('Erreur de lecture', e.message || 'Réessayez.');
+  }
 }
+
+// ── Fallback JS decoder (image fixe) ──
+async function decodeImageFile(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const img = new Image();
+      img.onload = async () => {
+        if ('BarcodeDetector' in window) {
+          try {
+            const bd = new BarcodeDetector({ formats: ['ean_13','ean_8','qr_code','code_128','upc_a','upc_e'] });
+            const codes = await bd.detect(img);
+            if (codes && codes.length) { resolve(codes[0].rawValue); return; }
+          } catch(e) {}
+        }
+        resolve(await decodeImageCanvas(img));
+      };
+      img.onerror = () => resolve(null);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function decodeImageCanvas(img) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const strategies = [
+    { scale:1.0, rotate:0, crop:null },
+    { scale:1.0, rotate:0, crop:{x:0.05,y:0.1,w:0.9,h:0.8} },
+    { scale:1.5, rotate:0, crop:null },
+    { scale:1.0, rotate:90, crop:null },
+    { scale:1.0, rotate:0, crop:null, contrast:true },
+    { scale:1.0, rotate:0, crop:{x:0.1,y:0.25,w:0.8,h:0.5} },
+  ];
+  for (const s of strategies) {
+    const r = decodeWithStrategy(canvas, ctx, img, s);
+    if (r) return r;
+  }
+  return null;
+}
+
+function decodeWithStrategy(canvas, ctx, img, strat) {
+  const {scale,rotate,crop,contrast} = strat;
+  let sx=0,sy=0,sw=img.width,sh=img.height;
+  if (crop) { sx=sw*crop.x; sy=sh*crop.y; sw=sw*crop.w; sh=sh*crop.h; }
+  const maxDim=1400;
+  let dw=sw*scale, dh=sh*scale;
+  if (Math.max(dw,dh)>maxDim){const r=maxDim/Math.max(dw,dh);dw*=r;dh*=r;}
+  dw=Math.round(dw);dh=Math.round(dh);
+  if (rotate===90||rotate===270){canvas.width=dh;canvas.height=dw;}
+  else{canvas.width=dw;canvas.height=dh;}
+  ctx.save();ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (rotate===90){ctx.translate(dh,0);ctx.rotate(Math.PI/2);}
+  else if (rotate===270){ctx.translate(0,dw);ctx.rotate(-Math.PI/2);}
+  ctx.drawImage(img,sx,sy,sw,sh,0,0,dw,dh);
+  ctx.restore();
+  if (contrast) applyContrast(ctx,canvas.width,canvas.height);
+  const H=canvas.height, W=canvas.width;
+  for (const off of [-0.25,-0.15,-0.05,0,0.05,0.15,0.25]) {
+    const y=Math.round(H*(0.5+off));
+    if (y<0||y>=H) continue;
+    const r=decodeRow(ctx,y,W);
+    if (r) return r;
+  }
+  return null;
+}
+
+function applyContrast(ctx,w,h){const d=ctx.getImageData(0,0,w,h);const px=d.data;for(let i=0;i<px.length;i+=4){const g=(px[i]*77+px[i+1]*150+px[i+2]*29)>>8;const c=g>128?255:0;px[i]=px[i+1]=px[i+2]=c;}ctx.putImageData(d,0,0);}
+function decodeRow(ctx,y,width){const d=ctx.getImageData(0,y,width,1);const binary=adaptiveThreshold(d.data,width);return ean13FromBinary(binary)||ean13FromBinary(binary.slice().reverse());}
+function adaptiveThreshold(px,w){const b=new Uint8Array(w),R=Math.max(15,Math.floor(w/40));for(let x=0;x<w;x++){const x0=Math.max(0,x-R),x1=Math.min(w-1,x+R);let s=0;for(let i=x0;i<=x1;i++){const idx=i*4;s+=(px[idx]*77+px[idx+1]*150+px[idx+2]*29)>>8;}const mean=s/(x1-x0+1);const idx=x*4;const g=(px[idx]*77+px[idx+1]*150+px[idx+2]*29)>>8;b[x]=g<mean*0.82?1:0;}return b;}
+
+const EAN_L=['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
+const EAN_G=['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'];
+const EAN_R=['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'];
+const EAN_PARITY=['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
+function ctr(code){const r=[];let l=1;for(let i=1;i<code.length;i++){if(code[i]===code[i-1])l++;else{r.push(l);l=1;}}r.push(l);return r;}
+const LR=EAN_L.map(ctr),GR=EAN_G.map(ctr),RR=EAN_R.map(ctr);
+function getBR(b){const r=[];if(!b.length)return r;let v=b[0],l=1;for(let i=1;i<b.length;i++){if(b[i]===v)l++;else{r.push(l);v=b[i];l=1;}}r.push(l);return r;}
+function mr(a,e,u){if(a.length!==e.length)return false;for(let i=0;i<a.length;i++)if(Math.abs(a[i]-e[i]*u)>u*0.6+0.5)return false;return true;}
+function ecs(d){let s=0;for(let i=0;i<12;i++)s+=d[i]*(i%2===0?1:3);return(10-(s%10))%10===d[12];}
+function ean13FromBinary(binary){
+  const runs=getBR(binary);if(runs.length<55)return null;
+  for(let si=0;si<runs.length-54;si++){
+    const g0=runs[si],g1=runs[si+1],g2=runs[si+2];
+    const uG=(g0+g1+g2)/3;if(uG<0.8)continue;
+    const tol=0.65;
+    if(Math.abs(g0/uG-1)>tol||Math.abs(g1/uG-1)>tol||Math.abs(g2/uG-1)>tol)continue;
+    let pos=si+3;const left=[],par=[];
+    for(let d=0;d<6;d++){
+      if(pos+3>=runs.length){left.push(-1);par.push('?');pos+=4;continue;}
+      const bars=runs.slice(pos,pos+4);
+      const u=(bars[0]+bars[1]+bars[2]+bars[3])/7;if(u<0.5){left.push(-1);par.push('?');pos+=4;continue;}
+      let found=false;
+      for(let n=0;n<10;n++){if(mr(bars,LR[n],u)){left.push(n);par.push('L');found=true;break;}if(mr(bars,GR[n],u)){left.push(n);par.push('G');found=true;break;}}
+      if(!found){left.push(-1);par.push('?');}pos+=4;
+    }
+    if(left.includes(-1)||par.includes('?'))continue;
+    pos+=5;
+    const right=[];
+    for(let d=0;d<6;d++){
+      if(pos+3>=runs.length){right.push(-1);pos+=4;continue;}
+      const bars=runs.slice(pos,pos+4);const u=(bars[0]+bars[1]+bars[2]+bars[3])/7;
+      if(u<0.5){right.push(-1);pos+=4;continue;}
+      let found=false;
+      for(let n=0;n<10;n++){if(mr(bars,RR[n],u)){right.push(n);found=true;break;}}
+      if(!found)right.push(-1);pos+=4;
+    }
+    if(right.includes(-1))continue;
+    const parStr=par.join('');const first=EAN_PARITY.indexOf(parStr);if(first===-1)continue;
+    const all=[first,...left,...right];if(ecs(all))return all.join('');
+  }
+  return null;
+}
+
+function showCameraError(titre, detail) {
+  const idle = document.getElementById('sc-idle');
+  idle.style.display = 'flex';
+  idle.innerHTML = `<div style="padding:20px;text-align:center">
+    <div style="font-size:28px;opacity:.4;margin-bottom:10px">📷</div>
+    <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#c00;margin-bottom:6px">${esc(titre)}</div>
+    <div style="font-size:10px;color:#888;line-height:1.5;max-width:260px;margin:0 auto">${esc(detail)}</div>
+    <button onclick="resetScanIdle()" style="margin-top:14px;padding:8px 16px;background:#fff;border:1px solid #ccc;font-size:9px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer">Réessayer</button>
+  </div>`;
+  const mz = document.getElementById('manual-zone');
+  if (mz) { mz.style.display = 'block'; document.getElementById('m-ean').focus(); }
+}
+
+function resetScanIdle() {
+  const idle = document.getElementById('sc-idle');
+  idle.innerHTML = `<svg width="44" height="32" fill="none" viewBox="0 0 44 32"><rect x=".5" y=".5" width="43" height="31" stroke="#444" stroke-width=".7"/><line x1="5" y1="5" x2="5" y2="27" stroke="#666" stroke-width=".8"/><line x1="9" y1="3" x2="9" y2="29" stroke="#666" stroke-width="1.2"/><line x1="14" y1="5" x2="14" y2="27" stroke="#666" stroke-width=".8"/><line x1="18" y1="3" x2="18" y2="29" stroke="#666" stroke-width=".8"/><line x1="22" y1="5" x2="22" y2="27" stroke="#666" stroke-width="1.2"/><line x1="26" y1="3" x2="26" y2="29" stroke="#666" stroke-width=".8"/><line x1="30" y1="5" x2="30" y2="27" stroke="#666" stroke-width=".8"/><line x1="34" y1="3" x2="34" y2="29" stroke="#666" stroke-width="1.2"/><line x1="38" y1="5" x2="38" y2="27" stroke="#666" stroke-width=".8"/></svg>
+    <div class="scan-idle-txt">Appuyer pour scanner<br>EAN13 ou QR emplacement</div>`;
+  idle.onclick = startScanAdaptive;
+}
+
+
 function stopScanner(){
   if(scanInterval==='purejs'){
     BarcodeScanner.stop(); // arrêter le moteur JS
@@ -1862,17 +1779,40 @@ function stopScanner(){
   document.getElementById('sc-ui').style.display='none';
   document.getElementById('sc-toggle').innerHTML='<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="1"/></svg> Démarrer';
 }
-function handleLocationQR(code){
-  toast('Emplacement scanné : '+code.replace('LOC:','').split(':')[0]);
-  const parts=code.split(':');if(parts.length<2)return;
-  const [r,a,e,c]=(parts[1]||'').split('-');
-  if(document.getElementById('loc-r')){
-    document.getElementById('loc-r').value=r||'';
-    document.getElementById('loc-a').value=a||'';
-    document.getElementById('loc-e').value=e||'';
-    document.getElementById('loc-c').value=c||'';
-    updateLocPreviewLive();
+
+// ── Scanner QR d'emplacement ──
+let scanLocMode = null; // 'default' | 'alt' | null
+function scanLocQR(mode){
+  scanLocMode = mode || 'default';
+  // Ouvrir le scanner photo iOS ou le scanner vidéo
+  const toast_msg = mode==='alt' ? 'Scanner le QR d\'un emplacement alternatif' : 'Scanner le QR de l\'emplacement';
+  toast(toast_msg);
+  if(isIOS()){
+    // Utiliser l'input file séparé pour scanner QR emplacement
+    const inp = document.getElementById('sc-photo-input');
+    if(inp){ inp.value=''; inp.click(); }
+  } else {
+    startScanner();
   }
+}
+function handleLocationQR(code){
+  const parts=code.split(':');if(parts.length<2)return;
+  const locCode=parts[1]||'';
+  const [r,a,e,c]=locCode.split('-');
+  if(scanLocMode==='alt'&&curEAN){
+    let locId=Object.keys(db.locations).find(id=>{const l=db.locations[id];return l.depotId===S.depotId&&buildLocCode(l.rack,l.allee,l.etagere,l.case)===locCode;});
+    if(!locId){locId=uid();db.locations[locId]={id:locId,rack:r||'',allee:a||'',etagere:e||'',case:c||'',depotId:S.depotId,desc:''};}
+    if(db.articles[curEAN]){addArtLoc(curEAN,S.depotId,locId,false);saveDB();renderLocGuidance(curEAN,S.depotId);toast('Emplacement alt. : '+locCode);}
+    scanLocMode=null;return;
+  }
+  toast('Emplacement : '+locCode);
+  const rEl=document.getElementById('loc-r');
+  if(rEl){rEl.value=r||'';document.getElementById('loc-a').value=a||'';document.getElementById('loc-e').value=e||'';document.getElementById('loc-c').value=c||'';updateLocPreviewLive();
+    const af=document.getElementById('adv-fields');const tg=document.getElementById('adv-toggle');
+    if(af&&af.style.display==='none'){af.style.display='block';if(tg)tg.textContent='Masquer les détails';}
+  }
+  scanLocMode=null;
+  // BELOW THIS is the rest of the ORIGINAL function - prevent duplicate
 }
 function toggleManual(){
   const z=document.getElementById('manual-zone');
@@ -1940,7 +1880,7 @@ function handleEAN(ean){
   document.getElementById('tr-dest').style.display=curOp==='transfer'?'block':'none';
   const band=document.getElementById('det-band');
   band.classList.add('on');
-  band.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(band.scrollIntoView)if(band.scrollIntoView)band.scrollIntoView({behavior:'smooth',block:'nearest'});
   toast('Détecté · '+ean);
 }
 function toggleAdvFields(){
@@ -1950,31 +1890,79 @@ function toggleAdvFields(){
   else{af.style.display='none';t.textContent='▾ Modifier les détails';}
 }
 function getArtLoc(ean,depotId){
-  const artLoc=db.articles[ean]&&db.articles[ean].locations&&db.articles[ean].locations[depotId];
-  if(!artLoc)return null;
-  return db.locations[artLoc]||null;
+  // Retourne l'emplacement par défaut (premier de la liste)
+  const locs=db.articles[ean]&&db.articles[ean].locations&&db.articles[ean].locations[depotId];
+  if(!locs)return null;
+  // Support format ancien (string) et nouveau (array)
+  const locId=Array.isArray(locs)?locs[0]:locs;
+  return db.locations[locId]||null;
+}
+function getArtLocs(ean,depotId){
+  // Retourne TOUS les emplacements d'un article dans un dépôt
+  const locs=db.articles[ean]&&db.articles[ean].locations&&db.articles[ean].locations[depotId];
+  if(!locs)return[];
+  const ids=Array.isArray(locs)?locs:[locs];
+  return ids.map(id=>db.locations[id]).filter(Boolean);
+}
+function addArtLoc(ean,depotId,locId,asDefault){
+  // Ajouter un emplacement à un article (en tête si défaut, sinon à la fin)
+  if(!db.articles[ean].locations)db.articles[ean].locations={};
+  const cur=db.articles[ean].locations[depotId];
+  let arr=Array.isArray(cur)?[...cur]:cur?[cur]:[];
+  arr=arr.filter(id=>id!==locId); // éviter doublons
+  if(asDefault){arr.unshift(locId);}else{arr.push(locId);}
+  db.articles[ean].locations[depotId]=arr;
 }
 function renderLocGuidance(ean,depotId){
   const zone=document.getElementById('loc-guide-zone');
-  const artLocId=db.articles[ean]&&db.articles[ean].locations&&db.articles[ean].locations[depotId];
-  if(artLocId&&db.locations[artLocId]){
-    const loc=db.locations[artLocId];
-    const code=buildLocCode(loc.rack,loc.allee,loc.etagere,loc.case);
-    zone.innerHTML=`<div class="loc-guide">
-      <div class="loc-guide-icon">📍</div>
-      <div class="loc-guide-info">
-        <div class="loc-guide-lbl">${curOp==='in'?'Ranger en':curOp==='out'?'Prélever en':'Localisation'}</div>
-        <div class="loc-guide-code">${code}</div>
-        ${loc.desc?'<div class="loc-guide-desc">'+esc(loc.desc)+'</div>':''}
-      </div>
-    </div>`;
-  } else zone.innerHTML='';
+  if(!zone)return;
+  const allLocs=getArtLocs(ean,depotId);
+  if(!allLocs.length){zone.innerHTML='';return;}
+  const verb=curOp==='in'?'Ranger en':curOp==='out'?'Prélever en':'Localisation';
+  const defLoc=allLocs[0];
+  const defCode=buildLocCode(defLoc.rack,defLoc.allee,defLoc.etagere,defLoc.case);
+  let html=`<div class="loc-guide" style="cursor:pointer" onclick="setLocFromGuide('${defLoc.id}')">
+    <div class="loc-guide-icon">📍</div>
+    <div class="loc-guide-info">
+      <div class="loc-guide-lbl">${esc(verb)} <span style="font-size:8px;letter-spacing:.15em;opacity:.7">(défaut)</span></div>
+      <div class="loc-guide-code">${esc(defCode)}</div>
+      ${defLoc.desc?'<div class="loc-guide-desc">'+esc(defLoc.desc)+'</div>':''}
+    </div>
+  </div>`;
+  // Emplacements alternatifs
+  if(allLocs.length>1){
+    html+=`<div style="padding:8px 0 4px;font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--warm)">Emplacements alternatifs</div>`;
+    allLocs.slice(1).forEach(loc=>{
+      const code=buildLocCode(loc.rack,loc.allee,loc.etagere,loc.case);
+      html+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:var(--bdr-l);cursor:pointer" onclick="setLocFromGuide('${loc.id}')">
+        <span style="font-size:12px">📌</span>
+        <div style="flex:1"><span style="font-family:var(--sans);font-weight:500;letter-spacing:.08em">${esc(code)}</span>${loc.desc?' <span style="font-size:9px;color:var(--warm)">'+esc(loc.desc)+'</span>':''}</div>
+        <span style="font-size:9px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase">Définir défaut</span>
+      </div>`;
+    });
+  }
+  // Bouton scanner QR emplacement alternatif
+  html+=`<div style="display:flex;gap:8px;margin-top:10px">
+    <button class="btn btn-gray btn-sm" style="flex:1" onclick="scanLocQR('alt')">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3M17 17h3M14 20h3"/></svg>
+      Scanner un autre emplacement
+    </button>
+  </div>`;
+  zone.innerHTML=html;
+}
+
+// Appliquer un emplacement depuis le guide (clic)
+function setLocFromGuide(locId,makeDefault=false){
+  const loc=db.locations[locId];if(!loc)return;
+  document.getElementById('loc-r').value=loc.rack||'';
+  document.getElementById('loc-a').value=loc.allee||'';
+  document.getElementById('loc-e').value=loc.etagere||'';
+  document.getElementById('loc-c').value=loc.case||'';
+  updateLocPreviewLive();
+  toast('Emplacement sélectionné : '+buildLocCode(loc.rack,loc.allee,loc.etagere,loc.case));
 }
 function chgQty(d){const i=document.getElementById('op-qty');i.value=Math.max(1,(parseInt(i.value)||1)+d);}
-function buildTrTargets(){
-  const s=document.getElementById('tr-target');
-  s.innerHTML=Object.values(db.depots).filter(d=>S&&d.id!==S.depotId).map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('');
-}
+
 function confirmOp(){
   if(!curEAN){toast('Aucun article scanné');return;}
   const name=document.getElementById('f-name').value.trim()||('Pièce '+curEAN);
@@ -1998,7 +1986,8 @@ function confirmOp(){
       db.locations[locId]={id:locId,rack:parts[0]||'',allee:parts[1]||'',etagere:parts[2]||'',case:parts[3]||'',depotId:S.depotId,desc:''};
     }
     if(!db.articles[curEAN].locations)db.articles[curEAN].locations={};
-    db.articles[curEAN].locations[S.depotId]=locId;
+    // Ajouter comme emplacement défaut
+    addArtLoc(curEAN,S.depotId,locId,true);
   }
 
   if(!db.stocks[S.depotId])db.stocks[S.depotId]={};
@@ -2110,7 +2099,8 @@ function renderEvolutionChart(dep){
 
   const canvas=document.getElementById('chart-evolution');
   if(!canvas)return;
-  const ctx=canvas.getContext('2d');
+  if(!canvas.getContext)return;
+  const ctx=canvas.getContext?canvas.getContext('2d'):null;if(!ctx)return;
   const W=canvas.width=canvas.offsetWidth*2;
   const H=canvas.height=180*2;
   ctx.scale(2,2);
@@ -2336,7 +2326,11 @@ function renderCartography(){
       cells.forEach(l=>{
         const code=buildLocCode(l.rack,l.allee,l.etagere,l.case);
         // Find articles + total qty at this location
-        const artsHere=Object.values(db.articles).filter(a=>a.locations&&a.locations[depId]===l.id);
+        const artsHere=Object.values(db.articles).filter(a=>{
+          const locs=a.locations&&a.locations[depId];
+          if(!locs)return false;
+          return Array.isArray(locs)?locs.includes(l.id):locs===l.id;
+        });
         const totalQty=artsHere.reduce((s,a)=>s+getStk(depId,a.ean),0);
         // Estimated capacity = sum of thresholds × 5 (heuristic) or just default 100
         const capacity=Math.max(100,artsHere.reduce((s,a)=>s+(a.threshold||0)*4,0));
@@ -2375,7 +2369,11 @@ function openLocDet(locId){
   const code=buildLocCode(loc.rack,loc.allee,loc.etagere,loc.case);
   document.getElementById('locdet-code').textContent=code;
   document.getElementById('locdet-desc').textContent=loc.desc||'Pas de description';
-  const artsHere=Object.values(db.articles).filter(a=>a.locations&&a.locations[depId]===loc.id);
+  const artsHere=Object.values(db.articles).filter(a=>{
+    const locs=a.locations&&a.locations[depId];
+    if(!locs)return false;
+    return Array.isArray(locs)?locs.includes(loc.id):locs===loc.id;
+  });
   const totalQty=artsHere.reduce((s,a)=>s+getStk(depId,a.ean),0);
   const capacity=Math.max(100,artsHere.reduce((s,a)=>s+(a.threshold||0)*4,0));
   const pct=Math.min(100,Math.round(totalQty/capacity*100));
@@ -2407,7 +2405,6 @@ function showQRForCurrentLoc(){
 }
 
 // ══════════════════════════════════════ CATALOGUE
-let catFam='all';
 function renderCat(){
   const q=document.getElementById('cat-q').value.toLowerCase();
   let arts=Object.values(db.articles);
@@ -2421,8 +2418,8 @@ function renderCat(){
   document.getElementById('cat-list').innerHTML=arts.map(a=>{
     const q=getStk(S.depotId,a.ean);
     const qc=q===0?'q-zero':a.threshold>0&&q<=a.threshold?'q-low':'q-ok';
-    const loc=getArtLoc(a.ean,S.depotId);
-    const locCode=loc?buildLocCode(loc.rack,loc.allee,loc.etagere,loc.case):'—';
+    const locs=getArtLocs(a.ean,S.depotId);
+    const locCode=locs.length?locs.map(l=>buildLocCode(l.rack,l.allee,l.etagere,l.case)).join(' / '):'—';
     return `<div class="art-row" onclick="openArtSheet('${a.ean}')">
       <div class="art-thumb">${a.photo?'<img src="'+a.photo+'">':'📦'}</div>
       <div class="art-info">
@@ -2512,8 +2509,8 @@ function renderStock(){
     const changed=loc!==undefined;
     const isAlert=a.threshold>0&&disp<=a.threshold;
     const qc=disp===0?'q-zero':isAlert?'q-low':'q-ok';
-    const artLoc=getArtLoc(a.ean,dep);
-    const locCode=artLoc?buildLocCode(artLoc.rack,artLoc.allee,artLoc.etagere,artLoc.case):'—';
+    const artLocs2=getArtLocs(a.ean,dep);
+    const locCode=artLocs2.length?artLocs2.map(l=>buildLocCode(l.rack,l.allee,l.etagere,l.case)).join(' / '):'—';
     return `<div class="art-row" onclick="openStkSheet('${a.ean}')">
       <div class="art-thumb">${a.photo?'<img src="'+a.photo+'">':'📦'}</div>
       <div class="art-info">
@@ -2536,10 +2533,9 @@ function openStkSheet(ean){
   document.getElementById('ss-qty').value=loc!==undefined?loc:qty;
   const th=document.getElementById('ss-thumb');
   if(a&&a.photo){th.innerHTML='<img src="'+a.photo+'" style="width:100%;height:100%;object-fit:cover">';} else {th.textContent='📦';}
-  const artLoc=getArtLoc(ean,S.depotId);
-  const locCode=artLoc?buildLocCode(artLoc.rack,artLoc.allee,artLoc.etagere,artLoc.case):'';
+  const artLocsAll=getArtLocs(ean,S.depotId);
   const locDiv=document.getElementById('ss-loc-display');
-  if(locCode){locDiv.innerHTML='<div class="loc-badge" onclick="showQR(\''+ean+'\')"><span style="font-size:14px">📍</span><span class="loc-badge-code">'+locCode+'</span><span class="loc-badge-lbl">Emplacement</span></div>';}
+  if(artLocsAll.length){locDiv.innerHTML=artLocsAll.map((l,i)=>{const code=buildLocCode(l.rack,l.allee,l.etagere,l.case);return '<div class="loc-badge" style="'+(i>0?'opacity:.75;margin-top:4px':'')+'" onclick="showQR(\''+ean+'\')"><span style="font-size:14px">'+(i===0?'📍':'📌')+'</span><span class="loc-badge-code">'+esc(code)+'</span><span class="loc-badge-lbl">'+(i===0?'Défaut':'Alt.')+'</span></div>';}).join('');}
   else locDiv.innerHTML='';
   const alertDiv=document.getElementById('ss-alert-info');
   if(a&&a.threshold>0){alertDiv.textContent='Seuil d\'alerte : '+a.threshold+' unité(s)';alertDiv.style.color=qty<=a.threshold?'var(--red)':'var(--warm)';}
@@ -2825,7 +2821,7 @@ function addAudit(type,action,meta){
   db.audit.unshift({id:uid(),type,action,operator:S?S.name:'système',depotId:S?S.depotId:'',date:new Date().toISOString(),meta});
   if(db.audit.length>1000)db.audit.length=1000;
 }
-const AUDIT_ICONS={in:'📥',out:'📤',inv:'📋',transfer:'↔️',login:'🔐',admin:'⚙️'};
+
 function setAF(f,el){afFilter=f;document.querySelectorAll('[data-af]').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderAudit();}
 function renderAudit(){
   const q=document.getElementById('audit-q').value.toLowerCase();
@@ -3108,7 +3104,7 @@ function exportPDF(){
 }
 
 // ══════════════════════════════════════ SHEETS / HELPERS
-const SHEET_MAP={art:'art-sheet-bg',stk:'stk-sheet-bg',usr:'usr-sheet-bg',dep:'dep-sheet-bg',loc:'loc-sheet-bg','art-hist':'art-hist-bg',locdet:'locdet-sheet-bg'};
+
 function closeSheet(name){const el=document.getElementById(SHEET_MAP[name]||name+'-sheet-bg');if(el)el.classList.remove('on');}
 function getStk(depotId,ean){return(db.stocks[depotId]||{})[ean]||0;}
 function addHist(entry){db.history.unshift(Object.assign({operator:S.name,date:new Date().toISOString()},entry));if(db.history.length>500)db.history.length=500;}
@@ -3339,9 +3335,11 @@ function importSuggestedParts(){
 
 // Générer l'icône Apple Touch à la volée
 (function generateAppleIcon() {
+  try {
   const canvas = document.createElement('canvas');
   canvas.width = 180; canvas.height = 180;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+  if (!ctx) return;
   // Fond noir
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, 180, 180);
@@ -3357,6 +3355,7 @@ function importSuggestedParts(){
   const dataUrl = canvas.toDataURL('image/png');
   const link = document.getElementById('apple-touch-icon-link');
   if (link) link.href = dataUrl;
+  } catch(e) {}
 })();
 
 // Enregistrement Service Worker via Blob (fonctionne sans fichier externe)
@@ -3419,11 +3418,17 @@ async function installPWA() {
 }
 
 // ── Détection mode standalone (déjà installée) ──
-if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || (window.navigator && window.navigator.standalone)) {
   console.log('[PWA] Mode standalone actif');
   document.documentElement.classList.add('pwa-standalone');
 }
 
+
+
+
+
+
+
+
 </script>
 </body>
-</html>
