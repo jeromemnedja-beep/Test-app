@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="MODE Stock">
 <title>MODE — Gestion de Stock</title>
-<script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.2.4000/dist/dbr.bundle.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500&display=swap');
 :root {
@@ -1425,71 +1425,33 @@ function checkPending(){
 
 
 // ══════════════════════════════════════════════════════════
-//  SCANNER ENGINE v3 — Dynamsoft + fallback photo iOS
-//  Dynamsoft: scan continu, temps réel, iOS Safari 14+
-//  Fallback: photo capture si Dynamsoft indisponible
+//  SCANNER ENGINE v4 — html5-qrcode (gratuit, MIT)
+//  Scan continu temps réel iOS Safari 14+ / Android + fallback photo
 // ══════════════════════════════════════════════════════════
 
-let scanStream = null, scanInterval = null, scannerOn = false;
-let dyRouter = null, dyCameraView = null, dyEnhancer = null;
-let dyLoaded = false, dyLoading = false;
-
-// Clé de trial publique Dynamsoft (valable pour évaluation)
-const DYNAMSOFT_LICENSE = 'DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9';
+let scannerOn = false;
+let html5QrCode = null;
 
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
-// ── Initialisation Dynamsoft (lazy load) ──
-async function initDynamsoft() {
-  if (dyLoaded) return true;
-  if (dyLoading) {
-    // Attendre qu'il soit prêt
-    return new Promise(resolve => {
-      const check = setInterval(() => { if (dyLoaded) { clearInterval(check); resolve(true); } }, 200);
-      setTimeout(() => { clearInterval(check); resolve(false); }, 10000);
-    });
-  }
-  if (typeof Dynamsoft === 'undefined') return false;
-  dyLoading = true;
-  try {
-    Dynamsoft.License.LicenseManager.initLicense(DYNAMSOFT_LICENSE, true);
-    await Dynamsoft.Core.CoreModule.loadWasm(['dbr']);
-    dyLoaded = true; dyLoading = false;
-    return true;
-  } catch(e) {
-    console.warn('[Scanner] Dynamsoft init failed:', e.message);
-    dyLoading = false; return false;
-  }
-}
-
 // ── Point d'entrée principal ──
 async function startScanAdaptive() {
   if (scannerOn) { stopScanner(); return; }
 
-  // Vérifier contexte sécurisé
   if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
     showCameraError('HTTPS requis', 'Ouvrez l\'app via GitHub Pages (https://) pour activer le scanner.');
     return;
   }
   try { if (window.self !== window.top) { showCameraError('Aperçu uniquement', 'Ouvrez l\'app directement dans Safari sur votre iPhone.'); return; } } catch(e) {}
 
-  // Essayer Dynamsoft en priorité (fonctionne sur iOS Safari)
-  const ds = await initDynamsoft();
-  if (ds) {
-    await startDynamsoftScanner();
-  } else {
-    // Fallback: photo capture
-    document.getElementById('sc-photo-input').value = '';
-    document.getElementById('sc-photo-input').click();
-  }
+  await startHtml5Scanner();
 }
 
-// ── Scanner Dynamsoft (continu, temps réel, iOS + Android) ──
-async function startDynamsoftScanner() {
-  const vp = document.getElementById('scanner-vp');
+// ── Scanner html5-qrcode (continu, temps réel, iOS + Android) ──
+async function startHtml5Scanner() {
   const idle = document.getElementById('sc-idle');
   const ui = document.getElementById('sc-ui');
   const dceContainer = document.getElementById('dce-view-container');
@@ -1498,75 +1460,52 @@ async function startDynamsoftScanner() {
   ui.style.display = 'flex';
   document.getElementById('sc-btn-label').textContent = 'Arrêter';
   scannerOn = true;
+  dceContainer.style.display = 'block';
 
   try {
-    // Créer CameraView et CameraEnhancer
-    dyCameraView = await Dynamsoft.DCE.CameraView.createInstance();
-    dyEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(dyCameraView);
-
-    // Injecter l'UI dans notre container
-    dceContainer.innerHTML = '';
-    dceContainer.appendChild(dyCameraView.getUIElement());
-    dceContainer.style.display = 'block';
-
-    // Configurer la région de scan (bande centrale)
-    await dyEnhancer.setScanRegion({
-      x: 0, y: 25, width: 100, height: 50,
-      isMeasuredInPercentage: true
-    });
-
-    // Créer le router de capture
-    dyRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
-    dyRouter.setInput(dyEnhancer);
-
-    // Écouter les résultats
-    dyRouter.addResultReceiver({
-      onDecodedBarcodesReceived: (result) => {
-        const items = result.barcodeResultItems;
-        if (!items || !items.length) return;
-        const code = items[0].text;
-        if (!code || code.length < 8) return;
+    html5QrCode = new Html5Qrcode('dce-view-container');
+    await html5QrCode.start(
+      { facingMode: 'environment' },
+      {
+        fps: 10,
+        qrbox: { width: 260, height: 100 },
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+        ],
+        aspectRatio: 1.5,
+      },
+      (code) => {
+        if (!code || code.length < 4) return;
         stopScanner();
         if (code.startsWith('LOC:')) { handleLocationQR(code); }
         else { handleEAN(code); }
-      }
-    });
-
-    // Ouvrir la caméra (préférence arrière)
-    await dyEnhancer.open();
-    try {
-      const cameras = await dyEnhancer.getAllCameras();
-      const back = cameras.find(c => c.label && /back|rear|environment/i.test(c.label));
-      if (back) await dyEnhancer.selectCamera(back);
-    } catch(e) {}
-
-    // Démarrer la capture
-    await dyRouter.startCapturing('ReadSingleBarcode');
-
+      },
+      () => {}
+    );
   } catch(e) {
-    console.error('[Dynamsoft] Error:', e);
+    console.error('[html5-qrcode] Error:', e);
     stopScanner();
-    showCameraError('Erreur scanner', 'Fallback mode photo activé.');
-    setTimeout(() => { document.getElementById('sc-photo-input').click(); }, 500);
+    showCameraError('Erreur scanner', 'Vérifiez les permissions caméra et réessayez.');
   }
 }
 
 // ── Stop scanner ──
-function stopScanner() {
+async function stopScanner() {
   scannerOn = false;
 
-  // Arrêter Dynamsoft
-  if (dyRouter) { try { dyRouter.stopCapturing(); dyRouter.dispose(); } catch(e){} dyRouter = null; }
-  if (dyEnhancer) { try { dyEnhancer.close(); dyEnhancer.dispose(); } catch(e){} dyEnhancer = null; }
-  if (dyCameraView) { try { dyCameraView.dispose(); } catch(e){} dyCameraView = null; }
+  if (html5QrCode) {
+    try { await html5QrCode.stop(); } catch(e) {}
+    try { html5QrCode.clear(); } catch(e) {}
+    html5QrCode = null;
+  }
+
   const dceContainer = document.getElementById('dce-view-container');
   if (dceContainer) { dceContainer.style.display = 'none'; dceContainer.innerHTML = ''; }
-
-  // Arrêter stream vidéo si actif
-  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
-  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
-  const vp = document.getElementById('scanner-vp');
-  if (vp) { const vid = vp.querySelector('video'); if (vid) vid.remove(); }
 
   document.getElementById('sc-idle').style.display = 'flex';
   document.getElementById('sc-ui').style.display = 'none';
@@ -1574,7 +1513,7 @@ function stopScanner() {
   if (lbl) lbl.textContent = 'Scanner';
 }
 
-// ── iOS photo fallback (si Dynamsoft indisponible) ──
+// ── Fallback photo (si caméra indisponible) ──
 async function handlePhotoScan(input) {
   const file = input.files[0];
   if (!file) return;
@@ -1590,19 +1529,16 @@ async function handlePhotoScan(input) {
   try {
     let code = null;
 
-    // Essayer Dynamsoft sur l'image fixe
-    const ds = await initDynamsoft();
-    if (ds) {
-      try {
-        const r = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
-        const results = await r.capture(file, 'ReadSingleBarcode');
-        r.dispose();
-        const items = results.items.filter(i => i.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE);
-        if (items.length) code = items[0].text;
-      } catch(e) { console.warn('Dynamsoft image decode failed:', e); }
-    }
+    // Essayer html5-qrcode sur l'image fixe
+    try {
+      let tmpEl = document.getElementById('_tmp_qr_reader');
+      if (!tmpEl) { tmpEl = document.createElement('div'); tmpEl.id = '_tmp_qr_reader'; tmpEl.style.display = 'none'; document.body.appendChild(tmpEl); }
+      const tmpReader = new Html5Qrcode('_tmp_qr_reader', { verbose: false });
+      code = await tmpReader.scanFile(file, false);
+      try { tmpReader.clear(); } catch(e) {}
+    } catch(e) {}
 
-    // Fallback décodeur JS si Dynamsoft ne trouve rien
+    // Fallback décodeur natif si html5-qrcode ne trouve rien
     if (!code) code = await decodeImageFile(file);
 
     vp.removeChild(loadDiv);
